@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Algo World 3D - Bug Hunter</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+
+        /* 3D Button Effekte */
+        .btn-3d {
+            transition: all 0.1s;
+            box-shadow: 0 8px 0 rgba(0,0,0,0.2);
+        }
+        .btn-3d:active:not(:disabled) {
+            transform: translateY(8px);
+            box-shadow: 0 0px 0 rgba(0,0,0,0.2);
+        }
+        
+        /* Island 3D Effekt für die Übersichtskarte */
+        .island-3d {
+            box-shadow: 0 15px 0 rgba(0,0,0,0.15), 0 20px 25px -5px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .island-3d:hover:not(:disabled) {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 0 rgba(0,0,0,0.15), 0 25px 30px -5px rgba(0,0,0,0.2);
+        }
+        .island-3d:active:not(:disabled) {
+            transform: translateY(10px);
+            box-shadow: 0 5px 0 rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.2);
+        }
+
+        /* Glitch Effekt für Welt 9 */
+        .glitch-text {
+            text-shadow: 2px 2px #ff00ff, -2px -2px #00ffff;
+        }
+
+        /* Neon Blau Schrift */
+        .neon-blue-text {
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff;
+        }
+    </style>
+</head>
+<body class="bg-sky-200 overflow-x-hidden font-sans">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- HILFS-KOMPONENTEN ---
+        const Button3D = ({ children, onClick, color = "blue", className = "", disabled = false }) => {
+            const colorMap = {
+                blue: "bg-blue-500 hover:bg-blue-400 text-white",
+                green: "bg-green-500 hover:bg-green-400 text-white",
+                red: "bg-red-500 hover:bg-red-400 text-white",
+                yellow: "bg-yellow-400 hover:bg-yellow-300 text-yellow-900",
+                purple: "bg-purple-500 hover:bg-purple-400 text-white",
+                gray: "bg-gray-400 hover:bg-gray-300 text-white",
+                black: "bg-gray-900 hover:bg-gray-800 text-green-400 border-2 border-green-500",
+            };
+            return (
+                <button 
+                    onClick={onClick} 
+                    disabled={disabled}
+                    className={`btn-3d w-full py-4 font-bold text-xl rounded-2xl ${colorMap[color]} ${disabled ? 'opacity-50 cursor-not-allowed transform-none shadow-none' : ''} ${className}`}
+                >
+                    {children}
+                </button>
+            );
+        };
+
+        const DialogBox = ({ title, icon, children, color = "blue" }) => {
+            const borders = { blue: "border-blue-300", yellow: "border-yellow-300", red: "border-red-300", green: "border-green-300", purple: "border-purple-300", teal: "border-teal-300", orange: "border-orange-300", black: "border-green-500" };
+            const bgs = { blue: "bg-blue-50", yellow: "bg-yellow-50", red: "bg-red-50", green: "bg-green-50", purple: "bg-purple-50", teal: "bg-teal-50", orange: "bg-orange-50", black: "bg-gray-900" };
+            const texts = { blue: "text-blue-800", yellow: "text-yellow-800", red: "text-red-800", green: "text-green-800", purple: "text-purple-800", teal: "text-teal-800", orange: "text-orange-800", black: "text-green-400" };
+            const textBase = color === 'black' ? 'text-green-300 font-mono' : 'text-gray-700 font-medium';
+
+            return (
+                <div className={`${bgs[color]} p-6 rounded-3xl border-b-8 border-x-4 border-t-4 ${borders[color]} mb-6 shadow-lg`}>
+                    <h3 className={`font-black text-2xl ${texts[color]} mb-4 flex items-center gap-3`}>
+                        <i className={`fa-solid ${icon} text-3xl`}></i> {title}
+                    </h3>
+                    <div className={`space-y-4 ${textBase}`}>
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- UNSERE SPIELFIGUR ALGO ---
+        const AlgoCharacter = () => (
+            <div className="relative flex flex-col items-center animate-bounce z-50 hover:scale-110 transition-transform cursor-pointer" style={{ filter: 'drop-shadow(0px 6px 4px rgba(0,0,0,0.4))' }}>
+                <div className="absolute -top-8 bg-white text-[10px] font-black px-2 py-1 rounded-full border-2 border-emerald-400 shadow-sm text-emerald-600 whitespace-nowrap">Ich bin Algo!</div>
+                
+                {/* Zettel Körper */}
+                <div className="relative bg-yellow-50 w-12 h-16 border-4 border-gray-500 flex flex-col items-center justify-start pt-3 z-10 shadow-inner rounded-sm">
+                    {/* Eselsohr oben rechts */}
+                    <div className="absolute -top-1 -right-1 w-0 h-0 border-l-[12px] border-l-transparent border-b-[12px] border-b-gray-400"></div>
+                    <div className="absolute -top-1 -right-1 w-0 h-0 border-r-[12px] border-r-sky-300 border-t-[12px] border-t-sky-300"></div>
+                    
+                    {/* Augen */}
+                    <div className="flex gap-2 mb-1 z-20">
+                        <div className="w-2 h-2 bg-black rounded-full"></div>
+                        <div className="w-2 h-2 bg-black rounded-full"></div>
+                    </div>
+                    {/* Lächeln */}
+                    <div className="w-4 h-2 border-b-4 border-black rounded-full mb-2"></div>
+                    
+                    {/* Code-Linien auf dem Zettel */}
+                    <div className="w-8 h-1 bg-gray-300 mb-1 rounded"></div>
+                    <div className="w-6 h-1 bg-gray-300 mb-1 rounded"></div>
+                    <div className="w-7 h-1 bg-gray-300 rounded"></div>
+                </div>
+            </div>
+        );
+
+        // --- HINTERGRÜNDE FÜR DIE WELTEN-MAPS ---
+        const WorldBackground = ({ worldId }) => {
+            switch(worldId) {
+                case 1: // Grasland
+                    return (
+                        <div className="absolute inset-0 bg-sky-300 overflow-hidden pointer-events-none">
+                            <div className="absolute top-10 left-20 text-white opacity-80 animate-float"><i className="fa-solid fa-cloud text-6xl"></i></div>
+                            <div className="absolute top-32 right-10 text-white opacity-60 animate-float" style={{animationDelay:'1s'}}><i className="fa-solid fa-cloud text-8xl"></i></div>
+                            <div className="absolute -bottom-32 -left-20 w-[150%] h-64 bg-green-500 rounded-[100%] border-t-8 border-green-600"></div>
+                            <div className="absolute -bottom-40 right-10 w-96 h-80 bg-green-400 rounded-[100%] border-t-8 border-green-500"></div>
+                        </div>
+                    );
+                case 2: // Wüste
+                    return (
+                        <div className="absolute inset-0 bg-orange-200 overflow-hidden pointer-events-none">
+                            <div className="absolute top-10 left-1/4 text-yellow-100 opacity-90 animate-pulse"><i className="fa-solid fa-sun text-8xl"></i></div>
+                            <div className="absolute -bottom-20 -left-20 w-[120%] h-64 bg-yellow-500 rounded-[100%] border-t-8 border-yellow-600"></div>
+                            <div className="absolute -bottom-32 right-0 w-96 h-80 bg-yellow-400 rounded-[100%] border-t-8 border-yellow-500"></div>
+                        </div>
+                    );
+                case 3: // Wasserfall
+                    return (
+                        <div className="absolute inset-0 bg-blue-200 overflow-hidden pointer-events-none">
+                            <div className="absolute top-0 right-1/3 w-32 h-full bg-blue-400 opacity-60"></div>
+                            <div className="absolute top-0 right-1/3 w-8 h-full bg-blue-300 opacity-80 animate-pulse"></div>
+                            <div className="absolute -bottom-20 -left-20 w-[150%] h-40 bg-blue-600 rounded-[100%] border-t-8 border-blue-700"></div>
+                        </div>
+                    );
+                case 4: // Dschungel
+                    return (
+                        <div className="absolute inset-0 bg-emerald-800 overflow-hidden pointer-events-none">
+                            <div className="absolute -top-20 -left-10 w-64 h-64 bg-emerald-600 rounded-full border-b-8 border-emerald-700"></div>
+                            <div className="absolute -bottom-20 -left-20 w-[150%] h-64 bg-emerald-900 rounded-[100%] border-t-8 border-emerald-950"></div>
+                        </div>
+                    );
+                case 5: // Eiswelt
+                    return (
+                        <div className="absolute inset-0 bg-cyan-100 overflow-hidden pointer-events-none">
+                            <div className="absolute top-10 left-10 text-white animate-float"><i className="fa-regular fa-snowflake text-4xl"></i></div>
+                            <div className="absolute -bottom-20 -left-20 w-[120%] h-64 bg-white rounded-[100%] border-t-8 border-cyan-200"></div>
+                        </div>
+                    );
+                case 6: // Wolkenstadt
+                    return (
+                        <div className="absolute inset-0 bg-sky-200 overflow-hidden pointer-events-none">
+                            <div className="absolute top-20 left-10 text-white opacity-90 animate-float"><i className="fa-solid fa-cloud text-8xl"></i></div>
+                            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-white rounded-full border-t-8 border-gray-100"></div>
+                        </div>
+                    );
+                case 7: // Lavaburg
+                    return (
+                        <div className="absolute inset-0 bg-red-950 overflow-hidden pointer-events-none">
+                            <div className="absolute bottom-10 left-10 w-64 h-64 bg-red-600 rounded-full blur-3xl opacity-40"></div>
+                            <div className="absolute -bottom-20 -left-20 w-[150%] h-40 bg-gray-900 rounded-[100%] border-t-8 border-orange-600"></div>
+                        </div>
+                    );
+                case 8: // Sternenwelt
+                    return (
+                        <div className="absolute inset-0 bg-indigo-950 overflow-hidden pointer-events-none">
+                            <div className="absolute top-10 left-10 text-yellow-200 opacity-80 animate-pulse"><i className="fa-solid fa-star"></i></div>
+                            <div className="absolute -bottom-40 -left-20 w-[150%] h-64 bg-purple-900 rounded-[100%] border-t-8 border-fuchsia-700"></div>
+                        </div>
+                    );
+                case 9: // EXPERTEN WELT (Neon Matrix)
+                    return (
+                        <div className="absolute inset-0 bg-black overflow-hidden pointer-events-none">
+                            {/* Matrix Grid */}
+                            <div className="absolute inset-0" style={{
+                                backgroundImage: 'linear-gradient(rgba(0, 255, 0, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 0, 0.2) 1px, transparent 1px)',
+                                backgroundSize: '40px 40px',
+                                transform: 'perspective(500px) rotateX(60deg) translateY(100px) translateZ(-200px)',
+                                transformOrigin: 'bottom'
+                            }}></div>
+                            <div className="absolute top-10 left-10 text-green-500 font-mono text-xl opacity-50 animate-pulse">01001011</div>
+                            <div className="absolute top-40 right-20 text-green-500 font-mono text-xl opacity-50 animate-pulse" style={{animationDelay:'0.5s'}}>11010010</div>
+                        </div>
+                    );
+                default: return <div className="absolute inset-0 bg-gray-200"></div>;
+            }
+        };
+
+        // --- LEVEL INHALTE (27 LEVEL) - FOKUS: DEBUGGING ---
+
+        // W1: Tal der Anleitungen (Grundlagen & Rezept-Bugs)
+        const L1_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Was ist ein Algorithmus?" icon="fa-scroll" color="green">
+                    <p>Willkommen! Algo der Zettel freut sich auf die Bug-Jagd mit dir.</p>
+                    <p>Ein <strong>Algorithmus</strong> ist eine <strong>Schritt-für-Schritt-Anleitung</strong>, um ein Problem zu lösen.</p>
+                    <p>Wenn auch nur ein Schritt falsch ist, haben wir einen <strong>Bug (Fehler)</strong>! In dieser Welt lernst du, wie man kaputte Anleitungen erkennt und repariert (Debugging).</p>
+                </DialogBox>
+                <Button3D color="green" onClick={onComplete}>Ich werde Bug-Jäger! 🐛</Button3D>
+            </div>
+        );
+        const L1_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Der Rezept-Bug" icon="fa-bug" color="red">
+                        <p>Ein Algorithmus muss logisch sein. Hier ist ein Code fürs Kuchenbacken. Wo hat sich der Logik-Fehler eingeschlichen?</p>
+                        <div className="font-mono bg-white border-2 border-red-200 p-4 rounded-xl mt-4 mb-4 text-red-900 shadow-inner">
+                            1. Teig in die Form füllen<br/>
+                            2. Kuchen aus dem Ofen holen<br/>
+                            3. Ofen anschalten
+                        </div>
+                        <div className="space-y-3">
+                            <button onClick={()=>setAns(1)} className={`w-full p-3 rounded-xl border-4 font-bold text-left ${ans===1?'bg-red-200 border-red-500':'bg-white hover:bg-gray-50'}`}>A) Schritt 1 ist falsch, es fehlt Mehl.</button>
+                            <button onClick={()=>setAns(2)} className={`w-full p-3 rounded-xl border-4 font-bold text-left ${ans===2?'bg-green-200 border-green-500':'bg-white hover:bg-gray-50'}`}>B) Schritt 2 & 3 sind falsch herum. Man holt keinen ungebackenen Kuchen raus!</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 2 && <Button3D color="green" onClick={onComplete}>Exakt! Gut repariert! 🎉</Button3D>}
+                    {ans === 1 && <p className="text-center font-bold text-red-500">Es fehlt zwar Mehl, aber der Haupt-Fehler ist die Logik am Ende!</p>}
+                </div>
+            );
+        };
+        const L1_3 = ({ onComplete }) => {
+            const [order, setOrder] = useState([]);
+            // Die durcheinander gewürfelten Schritte
+            const steps = ["🔥 Gerät einschalten", "🧈 Butter schmieren", "🍞 Toast reinlegen"];
+            const correctOrder = ["🍞 Toast reinlegen", "🔥 Gerät einschalten", "🧈 Butter schmieren"];
+            
+            const handleClick = (step) => { if(order.length < 3 && !order.includes(step)) setOrder([...order, step]); };
+            const correct = order.join() === correctOrder.join();
+
+            return (
+                <div className="text-center animate-pop-in">
+                    <i className="fa-solid fa-bread-slice text-7xl text-yellow-600 mb-4 animate-float block"></i>
+                    <h2 className="text-3xl font-black mb-4">Boss: Der verbuggte Toaster</h2>
+                    <p className="bg-yellow-100 p-4 rounded-2xl border-4 border-yellow-300 font-bold mb-6 text-sm text-left">
+                        "Hilfe! Mein Code ist komplett durcheinander geraten. Bringe die Schritte in die richtige Reihenfolge, um den Toast-Algorithmus zu ent-buggen!"
+                    </p>
+                    
+                    <div className="flex justify-center gap-2 mb-4">
+                        {steps.map((s,i) => (
+                            <button key={i} onClick={()=>handleClick(s)} disabled={order.includes(s)} className={`p-2 border-2 rounded-lg text-sm font-bold ${order.includes(s)?'bg-gray-200 text-gray-400':'bg-white hover:bg-blue-50 border-blue-400 shadow-sm'}`}>{s}</button>
+                        ))}
+                    </div>
+
+                    <div className="bg-white p-4 min-h-[150px] border-4 border-gray-400 rounded-xl mb-6 text-left shadow-inner">
+                        <p className="text-gray-400 font-bold mb-2">Neuer, reparierter Code:</p>
+                        <ol className="list-decimal list-inside font-bold text-green-700 space-y-2">
+                            {order.map((s,i)=><li key={i}>{s}</li>)}
+                        </ol>
+                        {order.length > 0 && order.length < 3 && <button onClick={()=>setOrder([])} className="text-red-500 text-sm mt-2 font-bold underline"><i className="fa-solid fa-trash"></i> Löschen</button>}
+                    </div>
+
+                    {order.length === 3 && correct && <Button3D color="purple" onClick={onComplete}>Perfekter Toast! Bug behoben! 🏰</Button3D>}
+                    {order.length === 3 && !correct && (
+                        <div className="animate-pop-in">
+                            <p className="text-red-500 font-bold mb-2"><i className="fa-solid fa-bug"></i> Immer noch ein Fehler!</p>
+                            <Button3D color="red" onClick={()=>setOrder([])}>Code neu schreiben</Button3D>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // W2: Wüste der Verwirrung (Eindeutigkeit & Ambiguity Bugs)
+        const L2_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Die Eindeutigkeits-Regel" icon="fa-robot" color="orange">
+                    <p>Roboter und Computer haben <b>keine Fantasie</b>.</p>
+                    <p>Ein Befehl wie "Mach mal das Fenster auf" ist ein schwerer Bug für einen Roboter. Welches Fenster? Das im Bad? Das Wohnzimmerfenster? Wie weit auf?</p>
+                    <p>Jede Zeile Code muss <strong>absolut eindeutig</strong> sein!</p>
+                </DialogBox>
+                <Button3D color="orange" onClick={onComplete}>Code darf nicht schwammig sein!</Button3D>
+            </div>
+        );
+        const L2_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Such den ungenauen Befehl" icon="fa-bug" color="red">
+                        <p>Ein Roboter soll dir einen Apfel holen. Welcher Code führt zu einem "Verwirrungs-Bug"?</p>
+                        <div className="space-y-3 mt-4">
+                            <button onClick={()=>setAns(1)} className={`w-full p-4 rounded-xl border-4 font-mono font-bold text-left ${ans===1?'bg-red-200 border-red-500':'bg-white hover:bg-gray-50'}`}>A) GEHE_ZU(Küche); NIMM(Apfel_rot);</button>
+                            <button onClick={()=>setAns(2)} className={`w-full p-4 rounded-xl border-4 font-mono font-bold text-left ${ans===2?'bg-green-200 border-green-500':'bg-white hover:bg-gray-50'}`}>B) GEHE_MAL(Irgendwo_hin); NIMM(Obst);</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 2 && <Button3D color="green" onClick={onComplete}>Richtig! "Irgendwo" und "Obst" sind Fehler! 🎉</Button3D>}
+                    {ans === 1 && <p className="text-center font-bold text-red-500">Das ist ein perfekter, fehlerfreier Code!</p>}
+                </div>
+            );
+        };
+        const L2_3 = ({ onComplete }) => {
+            const [commands, setCommands] = useState(['V', 'V', 'V']); // Verbuggter Startcode
+            const [carState, setCarState] = useState({ x: 0, y: 2, rot: -90 });
+            const [status, setStatus] = useState('idle'); // idle, running, crashed, failed, won
+
+            const target = { x: 1, y: 1 };
+
+            const reset = () => {
+                setCarState({ x: 0, y: 2, rot: -90 });
+                setCommands(['V', 'V', 'V']); // Reset to buggy code
+                setStatus('idle');
+            };
+
+            const addCmd = (cmd) => {
+                if (status === 'idle' && commands.length < 6) setCommands([...commands, cmd]);
+            };
+
+            const delCmd = () => {
+                if (status === 'idle' && commands.length > 0) setCommands(commands.slice(0, -1));
+            };
+
+            const run = async () => {
+                if (status !== 'idle' || commands.length === 0) return;
+                setStatus('running');
+
+                let cx = 0; let cy = 2; let crot = -90;
+                setCarState({ x: cx, y: cy, rot: crot });
+                await new Promise(r => setTimeout(r, 300));
+
+                for (let i = 0; i < commands.length; i++) {
+                    const cmd = commands[i];
+                    if (cmd === 'V') {
+                        let nrot = ((crot % 360) + 360) % 360;
+                        if (nrot === 0) cx += 1;
+                        else if (nrot === 90) cy += 1;
+                        else if (nrot === 180) cx -= 1;
+                        else if (nrot === 270) cy -= 1;
+                    } else if (cmd === 'R') {
+                        crot += 90;
+                    } else if (cmd === 'L') {
+                        crot -= 90;
+                    }
+
+                    setCarState({ x: cx, y: cy, rot: crot });
+                    await new Promise(r => setTimeout(r, 600));
+
+                    // Check Crash
+                    if (cx < 0 || cx > 2 || cy < 0 || cy > 2) {
+                        setStatus('crashed');
+                        return;
+                    }
+                }
+
+                if (cx === target.x && cy === target.y) {
+                    setStatus('won');
+                } else {
+                    setStatus('failed');
+                }
+            };
+
+            return (
+                <div className="text-center animate-pop-in">
+                    <h2 className="text-3xl font-black mb-4">Boss: Crash-Test-Auto</h2>
+                    <p className="bg-red-100 p-3 rounded-2xl border-4 border-red-300 font-bold mb-4 text-sm text-left text-red-900">
+                        <i className="fa-solid fa-triangle-exclamation"></i> BUG GEFUNDEN: Der aktuelle Code "Vor, Vor, Vor" lässt das Auto in die Wand krachen! <br/>Lösche den kaputten Code und baue einen neuen bis zur roten Flagge!
+                    </p>
+                    
+                    {/* Interactive Grid */}
+                    <div className="relative mx-auto mb-6 bg-gray-200 border-4 border-gray-400 rounded-xl shadow-inner box-content overflow-hidden" style={{ width: '180px', height: '180px' }}>
+                        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
+                            {[0,1,2,3,4,5,6,7,8].map(i => <div key={i} className="border border-gray-300"></div>)}
+                        </div>
+                        
+                        <div className="absolute flex items-center justify-center text-red-500 text-3xl" style={{ left: `${target.x * 60}px`, top: `${target.y * 60}px`, width: '60px', height: '60px' }}>
+                            <i className="fa-solid fa-flag animate-bounce"></i>
+                        </div>
+
+                        <div 
+                            className="absolute flex items-center justify-center transition-all duration-500 ease-in-out z-10"
+                            style={{ 
+                                left: `${carState.x * 60}px`, 
+                                top: `${carState.y * 60}px`,
+                                width: '60px', height: '60px',
+                                transform: `rotate(${carState.rot}deg)`
+                            }}
+                        >
+                            <i className={`fa-solid ${status === 'crashed' ? 'fa-explosion text-red-600 scale-150' : 'fa-car-side text-orange-600'} text-4xl drop-shadow-md transition-all`}></i>
+                        </div>
+                    </div>
+
+                    {/* Program Code view */}
+                    <div className={`bg-white border-4 rounded-xl p-2 mb-4 min-h-[56px] flex items-center justify-center gap-2 flex-wrap shadow-inner ${commands.join('') === 'VVV' ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}>
+                        {commands.length === 0 && <span className="text-gray-400 text-sm font-bold">Code ist leer.</span>}
+                        {commands.map((c, i) => (
+                            <span key={i} className="bg-orange-200 border-2 border-orange-400 text-orange-900 font-bold px-3 py-1 rounded-lg shadow-sm">
+                                {c === 'V' ? 'Vor' : c === 'R' ? 'Rechts' : 'Links'}
+                            </span>
+                        ))}
+                    </div>
+
+                    {/* Controls */}
+                    {status === 'idle' && (
+                        <div className="space-y-3">
+                            <div className="flex justify-center gap-2">
+                                <button onClick={()=>addCmd('L')} className="bg-blue-100 hover:bg-blue-200 border-2 border-blue-400 text-blue-800 font-black px-4 py-2 rounded-xl shadow-sm"><i className="fa-solid fa-arrow-rotate-left"></i> L</button>
+                                <button onClick={()=>addCmd('V')} className="bg-green-100 hover:bg-green-200 border-2 border-green-400 text-green-800 font-black px-4 py-2 rounded-xl shadow-sm"><i className="fa-solid fa-arrow-up"></i> Vor</button>
+                                <button onClick={()=>addCmd('R')} className="bg-blue-100 hover:bg-blue-200 border-2 border-blue-400 text-blue-800 font-black px-4 py-2 rounded-xl shadow-sm">R <i className="fa-solid fa-arrow-rotate-right"></i></button>
+                            </div>
+                            <div className="flex justify-center gap-2">
+                                <button onClick={delCmd} disabled={commands.length===0} className="bg-gray-200 hover:bg-red-200 border-2 border-gray-400 hover:border-red-400 text-gray-700 hover:text-red-700 font-black px-4 py-2 rounded-xl shadow-sm disabled:opacity-50"><i className="fa-solid fa-delete-left"></i> Löschen</button>
+                                <button onClick={run} disabled={commands.length===0} className="bg-orange-500 hover:bg-orange-600 border-b-4 border-orange-700 text-white font-black px-8 py-2 rounded-xl shadow-md disabled:opacity-50">CODE TESTEN</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Status Messages */}
+                    {status === 'running' && <p className="text-blue-600 font-black animate-pulse text-xl my-4">Führt Code aus...</p>}
+                    {status === 'crashed' && <div className="animate-pop-in mt-4"><p className="text-red-500 font-bold mb-2">CRASH! Du bist aus dem Raster gefahren.</p><Button3D color="red" onClick={reset}>Debuggen & Neustart</Button3D></div>}
+                    {status === 'failed' && <div className="animate-pop-in mt-4"><p className="text-red-500 font-bold mb-2">Ziel verfehlt! Das war der falsche Weg.</p><Button3D color="red" onClick={reset}>Debuggen & Neustart</Button3D></div>}
+                    {status === 'won' && <div className="animate-pop-in mt-4"><Button3D color="purple" onClick={onComplete}>Perfekt Repariert! Boss besiegt! 🏰</Button3D></div>}
+                </div>
+            );
+        };
+
+        // W3: Wasserfall der Reihenfolge (Sequenz)
+        const L3_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Reihenfolge-Fehler" icon="fa-list-ol" color="blue">
+                    <p>Ein Programm liest Code <strong>immer von oben nach unten</strong>.</p>
+                    <p>Wenn du die Reihenfolge vertauschst, entsteht ein Logik-Fehler. Stell dir vor, ein Algorithmus soll dir Socken und Schuhe anziehen.</p>
+                    <p className="font-mono bg-white p-2 rounded border border-blue-200 mt-2 text-sm text-blue-900">1. Ziehe Schuhe an<br/>2. Ziehe Socken an</p>
+                    <p className="text-red-600 font-bold">Das klappt nicht! Socken über den Schuhen?</p>
+                </DialogBox>
+                <Button3D color="blue" onClick={onComplete}>Die Reihenfolge ist heilig!</Button3D>
+            </div>
+        );
+        const L3_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Zahnputz-Bug" icon="fa-bug" color="teal">
+                        <p>Hier ist ein Code fürs Zähneputzen. Ein Schritt steht an der falschen Stelle und verursacht eine Sauerei. Welcher?</p>
+                        <ol className="list-decimal list-inside font-bold text-gray-700 bg-white p-4 rounded-xl border-2 border-teal-200 mt-4 mb-4 font-mono shadow-inner">
+                            <li>Zahnbürste in den Mund stecken</li>
+                            <li>Zahnpasta auf die Bürste tun</li>
+                            <li>3 Minuten putzen</li>
+                        </ol>
+                        <div className="flex gap-2">
+                            <button onClick={()=>setAns(1)} className={`flex-1 p-2 rounded-xl border-4 font-bold ${ans===1?'bg-red-200 border-red-500':'bg-white hover:bg-gray-100'}`}>Schritt 1</button>
+                            <button onClick={()=>setAns(2)} className={`flex-1 p-2 rounded-xl border-4 font-bold ${ans===2?'bg-green-200 border-green-500':'bg-white hover:bg-gray-100'}`}>Schritt 2</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 2 && <Button3D color="green" onClick={onComplete}>Korrekt! Man kann keine Paste auf eine Bürste im Mund tun! 🎉</Button3D>}
+                    {ans === 1 && <p className="text-center font-bold text-red-500">Fast... Schritt 2 ist das eigentliche Problem, das nach oben muss!</p>}
+                </div>
+            );
+        };
+        const L3_3 = ({ onComplete }) => {
+            const [order, setOrder] = useState([]);
+            // Falscher Startcode
+            const buggySteps = ["🌻 Blume blüht", "🌱 Samen einpflanzen", "💧 Gießen"];
+            const correctOrder = ["🌱 Samen einpflanzen", "💧 Gießen", "🌻 Blume blüht"];
+            
+            const handleClick = (step) => { if(order.length < 3 && !order.includes(step)) setOrder([...order, step]); };
+            const correct = order.join() === correctOrder.join();
+
+            return (
+                <div className="text-center animate-pop-in">
+                    <i className="fa-solid fa-seedling text-7xl text-green-500 mb-4 animate-float block"></i>
+                    <h2 className="text-3xl font-black mb-4">Boss: Der Pflanzen-Bug</h2>
+                    <p className="bg-red-100 p-4 rounded-2xl border-4 border-red-300 font-bold mb-4 text-sm text-left text-red-900">
+                        <i className="fa-solid fa-bug"></i> FEHLER: Die Blume stirbt sofort! Der Code hat einen kritischen Reihenfolge-Fehler. Baue die Schritte unten in der logisch richtigen Reihenfolge neu auf.
+                    </p>
+                    
+                    <div className="flex flex-col gap-2 mb-4">
+                        {buggySteps.map((s,i) => (
+                            <button key={i} onClick={()=>handleClick(s)} disabled={order.includes(s)} className={`p-3 border-4 rounded-xl font-bold text-lg shadow-sm transition-all ${order.includes(s)?'bg-gray-100 text-gray-300 border-gray-200 scale-95':'bg-white hover:border-blue-400 border-gray-300 text-gray-700'}`}>{s}</button>
+                        ))}
+                    </div>
+
+                    <div className={`bg-white p-4 min-h-[150px] border-4 rounded-xl mb-6 text-left shadow-inner transition-colors ${order.length===3 ? (correct ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-gray-400'}`}>
+                        <p className="text-gray-400 font-bold mb-2 text-sm uppercase">Dein reparierter Code:</p>
+                        <ol className="list-decimal list-inside font-bold text-green-800 space-y-2 font-mono">
+                            {order.map((s,i)=><li key={i}>{s}</li>)}
+                        </ol>
+                        {order.length > 0 && order.length < 3 && <button onClick={()=>setOrder([])} className="text-red-500 text-sm mt-4 font-bold bg-red-100 px-3 py-1 rounded"><i className="fa-solid fa-rotate-left"></i> Zurücksetzen</button>}
+                    </div>
+
+                    {order.length === 3 && correct && <Button3D color="purple" onClick={onComplete}>Pflanze gerettet! Boss besiegt! 🏰</Button3D>}
+                    {order.length === 3 && !correct && (
+                        <div className="animate-pop-in">
+                            <p className="text-red-600 font-black mb-2 animate-pulse">KRITISCHER FEHLER!</p>
+                            <Button3D color="red" onClick={()=>setOrder([])}>Nochmal Debuggen</Button3D>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // W4: Dschungel der Schleifen (Loop Bugs)
+        const L4_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Die Endlosschleife" icon="fa-rotate-right" color="green">
+                    <p>Programmierer nutzen Schleifen (Loops), um Dinge zu wiederholen.</p>
+                    <p>Aber Vorsicht vor dem gefährlichsten Fehler: der <strong>Endlosschleife (Infinite Loop)</strong>!</p>
+                    <p className="font-mono bg-white border border-green-300 p-2 rounded text-green-900 mt-2 text-sm">WIEDERHOLE_FÜR_IMMER:<br/>&nbsp;&nbsp;Essen()</p>
+                    <p>Wenn du dem Computer nie sagst, wann er aufhören soll, hängt er sich auf und stürzt ab!</p>
+                </DialogBox>
+                <Button3D color="green" onClick={onComplete}>Klingt gefährlich!</Button3D>
+            </div>
+        );
+        const L4_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Finde die Gefahr" icon="fa-bug" color="orange">
+                        <p>Was passiert bei diesem fehlerhaften Algorithmus?</p>
+                        <p className="font-mono bg-gray-900 text-green-400 p-4 rounded-xl mb-4 text-sm shadow-[0_0_10px_rgba(0,0,0,0.5)] border-2 border-green-600">
+                            Schritt 1: Nimm ein leeres Glas.<br/>
+                            Schritt 2: WIEDERHOLE_FÜR_IMMER:<br/>
+                            &nbsp;&nbsp;Gieße 1 Tropfen Wasser ins Glas.
+                        </p>
+                        <div className="space-y-3">
+                            <button onClick={()=>setAns(1)} className={`w-full p-4 rounded-xl border-4 font-bold text-left ${ans===1?'bg-red-200 border-red-500':'bg-white hover:bg-gray-50'}`}>A) Das Glas wird perfekt voll und er stoppt.</button>
+                            <button onClick={()=>setAns(2)} className={`w-full p-4 rounded-xl border-4 font-bold text-left ${ans===2?'bg-green-200 border-green-500':'bg-white hover:bg-gray-50'}`}>B) Das Glas läuft irgendwann über, weil der Code nie "Stopp" sagt (Endlosschleife).</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 2 && <Button3D color="green" onClick={onComplete}>Richtig! Ein klassischer Bug! 🎉</Button3D>}
+                    {ans === 1 && <p className="text-center font-bold text-red-500">Woher soll er wissen, dass es voll ist? Er wiederholt "FÜR IMMER"!</p>}
+                </div>
+            );
+        };
+        const L4_3 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="text-center animate-pop-in">
+                    <i className="fa-regular fa-square text-7xl text-emerald-600 mb-4 animate-float block"></i>
+                    <h2 className="text-3xl font-black mb-4">Boss: Der Loop-Doktor</h2>
+                    <p className="bg-red-100 p-4 rounded-2xl border-4 border-red-300 font-bold mb-4 text-sm text-left text-red-900">
+                        <i className="fa-solid fa-bug"></i> BUG: Ein Roboter soll ein Viereck (4 Seiten) malen. Aber sein Code zeichnet nur ein halbes offenes Viereck! Welcher Fix ist richtig?
+                    </p>
+                    <div className="font-mono bg-white p-3 rounded-xl border-2 border-gray-300 mb-4 text-left line-through text-gray-500">
+                        WIEDERHOLE 2 MAL:<br/>
+                        &nbsp;&nbsp;Linie_Malen()<br/>
+                        &nbsp;&nbsp;Drehe_90_Grad()
+                    </div>
+                    <div className="space-y-3 mb-6 text-left">
+                        <button onClick={()=>setAns(1)} className={`w-full p-4 rounded-2xl border-4 font-mono font-bold text-sm ${ans===1?'bg-green-200 border-green-500':'bg-white hover:border-emerald-400'}`}>
+                            WIEDERHOLE 4 MAL:<br/>&nbsp;&nbsp;Linie_Malen()<br/>&nbsp;&nbsp;Drehe_90_Grad()
+                        </button>
+                        <button onClick={()=>setAns(2)} className={`w-full p-4 rounded-2xl border-4 font-mono font-bold text-sm ${ans===2?'bg-red-200 border-red-500':'bg-white hover:border-emerald-400'}`}>
+                            WIEDERHOLE 8 MAL:<br/>&nbsp;&nbsp;Linie_Malen()<br/>&nbsp;&nbsp;Drehe_90_Grad()
+                        </button>
+                    </div>
+                    {ans === 1 && <Button3D color="purple" onClick={onComplete}>Code gefixt! Boss besiegt! 🏰</Button3D>}
+                    {ans === 2 && <p className="text-red-500 font-bold">Falsch! Dann malt er das Viereck zweimal übereinander.</p>}
+                </div>
+            );
+        };
+
+        // W5: Eiswelt der Bedingungen (If/Else Bugs)
+        const L5_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Logik-Lücken" icon="fa-code-branch" color="blue">
+                    <p>Bedingungen (IF/ELSE) lassen den Computer entscheiden.</p>
+                    <p>Aber wenn Programmierer eine Möglichkeit vergessen, entstehen <strong>Logik-Lücken (Logic Bugs)</strong>.</p>
+                    <p className="bg-white p-3 rounded-xl border-2 border-blue-200 mt-2 font-mono text-sm text-blue-900">
+                        <strong>WENN</strong> du Hunger hast:<br/>
+                        &nbsp;&nbsp;Iss einen Apfel.<br/>
+                        <span className="text-red-500 font-bold">Fehler: Was soll er machen, wenn du KEINEN Hunger hast? Das Programm stürzt ab, weil das "SONST" (ELSE) fehlt!</span>
+                    </p>
+                </DialogBox>
+                <Button3D color="blue" onClick={onComplete}>Immer an alles denken!</Button3D>
+            </div>
+        );
+        const L5_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Lebensgefährlicher Bug" icon="fa-traffic-light" color="teal">
+                        <p>Finde den fatalen Fehler in der Programmierung dieses selbstfahrenden Autos an einer Ampel:</p>
+                        <p className="font-mono bg-gray-900 text-green-400 p-4 rounded-xl mt-2 mb-4 text-sm shadow-inner border border-gray-600">
+                            WENN Ampel == "Grün":<br/>
+                            &nbsp;&nbsp;Fahre los<br/>
+                            WENN Ampel == "Rot":<br/>
+                            &nbsp;&nbsp;Fahre los
+                        </p>
+                        <div className="flex flex-col gap-3">
+                            <button onClick={()=>setAns(1)} className={`p-4 rounded-xl border-4 font-bold text-left ${ans===1?'bg-red-200 border-red-500':'bg-white hover:bg-gray-100'}`}>A) Es fehlt die Farbe Gelb.</button>
+                            <button onClick={()=>setAns(2)} className={`p-4 rounded-xl border-4 font-bold text-left ${ans===2?'bg-green-200 border-green-500':'bg-white hover:bg-gray-100'}`}>B) Das Auto fährt bei Rot los, anstatt zu bremsen! (Tödlicher Logik-Fehler)</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 2 && <Button3D color="green" onClick={onComplete}>Perfekt analysiert! Lebensretter! 🎉</Button3D>}
+                    {ans === 1 && <p className="text-center font-bold text-red-500">Das auch, aber der Rot-Befehl ist lebensgefährlich!</p>}
+                </div>
+            );
+        };
+        const L5_3 = ({ onComplete }) => {
+            const [fixed, setFixed] = useState(false);
+            return (
+                <div className="text-center animate-pop-in select-none">
+                    <i className="fa-solid fa-door-open text-7xl text-cyan-500 mb-4 animate-float block"></i>
+                    <h2 className="text-3xl font-black mb-4">Boss: Die Sensor-Tür</h2>
+                    <p className="bg-red-100 p-4 rounded-2xl border-4 border-red-300 font-bold mb-4 text-sm text-left text-red-900">
+                        <i className="fa-solid fa-bug"></i> FEHLER: Die Sicherheitstür in der Bank öffnet sich immer nachts von selbst! Finde und repariere den Bug im Code.
+                    </p>
+                    
+                    <div className="bg-gray-900 text-left p-4 rounded-xl font-mono border-4 border-gray-700 shadow-inner mb-6">
+                        <span className="text-green-400">WENN Zeit == "Tag":</span><br/>
+                        <span className="text-green-400 ml-4">Öffne_Tür()</span><br/>
+                        <span className="text-green-400">SONST:</span><br/>
+                        {!fixed ? (
+                            <button onClick={()=>setFixed(true)} className="ml-4 mt-2 bg-red-600 hover:bg-red-500 text-white font-bold px-3 py-1 rounded w-3/4 animate-pulse shadow-md border-2 border-red-400">BUG: Öffne_Tür()</button>
+                        ) : (
+                            <span className="ml-4 mt-2 inline-block bg-green-600 text-white font-bold px-3 py-1 rounded w-3/4 shadow-[0_0_10px_#22c55e]">FIX: Schließe_Tür()</span>
+                        )}
+                    </div>
+
+                    {fixed && <div className="animate-pop-in"><Button3D color="purple" onClick={onComplete}>Tür gesichert! Boss besiegt! 🏰</Button3D></div>}
+                </div>
+            );
+        };
+
+        // W6: Wolkenstadt der Variablen (Variable Bugs)
+        const L6_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Variablen (Platzhalter)" icon="fa-box" color="blue">
+                    <p>Computer nutzen <strong>Variablen</strong> (wie beschriftete Kisten), um sich Zahlen zu merken. Z.B. "Punkte" oder "Leben".</p>
+                    <p>Ein fieser Fehler passiert, wenn man eine Variable <strong>falsch berechnet</strong>.</p>
+                    <div className="bg-white p-4 text-center rounded-xl border-4 border-gray-300 shadow-inner my-2 font-mono font-bold text-sm">
+                        Leben = 3<br/>
+                        <span className="text-red-500">Leben = Leben + 100</span><br/>
+                        (Huch, der Spieler ist plötzlich unbesiegbar!)
+                    </div>
+                </DialogBox>
+                <Button3D color="blue" onClick={onComplete}>Gut aufpassen!</Button3D>
+            </div>
+        );
+        const L6_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Der Lava-Bug" icon="fa-fire" color="teal">
+                        <p>Du testest ein neues Videospiel. Der Spieler springt in die Lava und stirbt nicht!</p>
+                        <p className="font-mono bg-gray-900 text-green-400 p-4 rounded-xl mt-2 mb-4 text-sm border-2 border-gray-600">
+                            WENN Spieler berührt Lava:<br/>
+                            &nbsp;&nbsp;Leben = Leben + 1
+                        </p>
+                        <div className="space-y-3">
+                            <button onClick={()=>setAns(1)} className={`w-full p-4 rounded-xl border-4 font-bold text-left ${ans===1?'bg-red-200 border-red-500':'bg-white hover:bg-gray-50'}`}>A) Die Farbe der Lava ist im Code falsch.</button>
+                            <button onClick={()=>setAns(2)} className={`w-full p-4 rounded-xl border-4 font-bold text-left ${ans===2?'bg-green-200 border-green-500':'bg-white hover:bg-gray-50'}`}>B) Plus statt Minus! Der Spieler bekommt ein Leben geschenkt, statt eins zu verlieren.</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 2 && <Button3D color="green" onClick={onComplete}>Perfekt debuggt! 🎉</Button3D>}
+                    {ans === 1 && <p className="text-center font-bold text-red-500">Das erklärt nicht, warum das Leben steigt!</p>}
+                </div>
+            );
+        };
+        const L6_3 = ({ onComplete }) => {
+            const [ans, setAns] = useState('');
+            return (
+                <div className="text-center animate-pop-in">
+                    <i className="fa-solid fa-calculator text-7xl text-sky-500 mb-4 animate-float block"></i>
+                    <h2 className="text-3xl font-black mb-4">Boss: Der Taschenrechner-Bug</h2>
+                    <p className="bg-red-100 p-4 rounded-2xl border-4 border-red-300 font-bold mb-4 text-left text-sm text-red-900">
+                        <i className="fa-solid fa-bug"></i> Jemand hat beim Online-Shop einen Berechnungs-Bug eingebaut! Verfolge die Variablen und finde heraus, was der Kunde am Ende zahlen muss!
+                    </p>
+                    <div className="bg-sky-100 p-4 rounded-2xl border-4 border-sky-400 font-bold mb-6 font-mono text-left shadow-inner">
+                        PREIS = 10<br/>
+                        GUTSCHEIN = 2<br/>
+                        <span className="text-red-600">ENDBETRAG = PREIS + GUTSCHEIN</span><br/><br/>
+                        Was steht in der Kiste "ENDBETRAG"?
+                    </div>
+                    <input type="number" value={ans} onChange={e=>setAns(e.target.value)} placeholder="Zahl..." className="w-full p-4 text-3xl font-black text-center border-4 border-gray-400 rounded-2xl mb-6" />
+                    {ans === '12' ? <Button3D color="purple" onClick={onComplete}>Richtig! Der Kunde zahlt mehr! Boss besiegt! 🏰</Button3D> : (ans !== '' && <p className="text-red-500 font-bold mb-4">Rechne einfach 10 + 2 (Genau das ist der Bug!)</p>)}
+                </div>
+            );
+        };
+
+        // W7: Lavaburg (Kombinierte Fehler)
+        const L7_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Meister des Debuggings" icon="fa-magnifying-glass" color="red">
+                    <p>Du bist jetzt ein echter Bug-Jäger! Wenn du Fehler (Bugs) suchst, gehe wie ein Detektiv vor:</p>
+                    <ul className="list-disc ml-5 font-bold space-y-2 mt-2 text-red-900">
+                        <li>Lies den Code Zeile für Zeile (Reihenfolge prüfen).</li>
+                        <li>Stimmen die Bedingungen? (IF/ELSE)</li>
+                        <li>Gibt es Endlosschleifen? (Loops prüfen)</li>
+                    </ul>
+                </DialogBox>
+                <Button3D color="red" onClick={onComplete}>Detektiv-Modus an!</Button3D>
+            </div>
+        );
+        const L7_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Das kaputte Handy" icon="fa-mobile-screen-button" color="orange">
+                        <p>Dein neues Handy-Passwort-Programm hat einen Fehler. Es sperrt DICH aus, aber lässt Fremde rein!</p>
+                        <div className="font-mono bg-black text-green-400 p-4 rounded-xl mt-4 mb-4 text-sm border-2 border-gray-600">
+                            Eingabe = LeseGesicht()<br/>
+                            WENN Eingabe == Mein_Gesicht:<br/>
+                            &nbsp;&nbsp;Handy_Sperren()<br/>
+                            SONST:<br/>
+                            &nbsp;&nbsp;Handy_Entsperren()
+                        </div>
+                        <div className="space-y-3">
+                            <button onClick={()=>setAns(1)} className={`w-full p-3 border-4 rounded-xl font-bold text-left ${ans===1?'bg-green-200 border-green-500':'bg-white'}`}>A) Die Befehle "Sperren" und "Entsperren" wurden vertauscht!</button>
+                            <button onClick={()=>setAns(2)} className={`w-full p-3 border-4 rounded-xl font-bold text-left ${ans===2?'bg-red-200 border-red-500':'bg-white'}`}>B) Es fehlt eine Endlosschleife.</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 1 && <Button3D color="green" onClick={onComplete}>Richtig! Ein fieser Logik-Bug! 🎉</Button3D>}
+                </div>
+            );
+        };
+        const L7_3 = ({ onComplete }) => {
+            const [fixed, setFixed] = useState(false);
+            return (
+                <div className="text-center animate-pop-in">
+                    <i className="fa-solid fa-bomb text-7xl text-orange-500 mb-4 animate-float block"></i>
+                    <h2 className="text-3xl font-black mb-4">Boss: Der Countdown-Bug</h2>
+                    <p className="bg-orange-100 p-4 rounded-2xl border-4 border-orange-300 font-bold mb-4 text-left text-sm text-orange-900">
+                        Eine Rakete soll bei 0 starten. Aktuell zählt der Timer 3, 2, 1, 0, -1, -2... und startet nie! Repariere den Code.
+                    </p>
+                    
+                    <div className="bg-gray-900 text-green-400 font-mono text-left p-4 rounded-xl mb-6 relative border-4 border-gray-700 shadow-[0_0_15px_rgba(255,0,0,0.5)]">
+                        <p>Timer = 3</p>
+                        <p>WIEDERHOLE_IMMER:</p>
+                        <p>&nbsp;&nbsp;Timer = Timer - 1</p>
+                        <p>&nbsp;&nbsp;WENN Timer == 0:</p>
+                        {!fixed ? (
+                            <button onClick={()=>setFixed(true)} className="ml-4 mt-2 bg-red-600 text-white font-bold px-3 py-1 rounded animate-pulse w-3/4 border-2 border-red-400">BUG: Weiter_zählen()</button>
+                        ) : (
+                            <div className="ml-4 mt-2 bg-green-600 text-white font-bold px-3 py-1 rounded w-3/4 shadow-[0_0_10px_#22c55e]">FIX: Rakete_Starten() & Schleife stoppen</div>
+                        )}
+                    </div>
+
+                    {fixed && <Button3D color="purple" onClick={onComplete}>Rakete gestartet! Boss besiegt! 🏰</Button3D>}
+                </div>
+            );
+        };
+
+        // W8: Sternenwelt Finale (Zusammenfassung)
+        const L8_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Bug-Hunter Zertifikat" icon="fa-star" color="purple">
+                    <p>Du hast bewiesen, dass du Code lesen und Fehler finden kannst!</p>
+                    <p>Erinnern wir uns an die 3 häufigsten Fehlerarten:</p>
+                    <ul className="list-disc list-inside space-y-2 font-bold text-purple-900 bg-white p-4 rounded-xl border border-purple-200">
+                        <li><b>Reihenfolge-Fehler:</b> Socken über Schuhen.</li>
+                        <li><b>Logik-Lücken:</b> "WENN Rot: Gehe los" statt Stehenbleiben.</li>
+                        <li><b>Endlosschleifen:</b> Der Code hört niemals auf.</li>
+                    </ul>
+                </DialogBox>
+                <Button3D color="yellow" onClick={onComplete}>Bereit für den Abschlusstest!</Button3D>
+            </div>
+        );
+        const L8_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Aufwärm-Quiz" icon="fa-rocket" color="blue">
+                        <p className="font-bold">Was bedeutet das englische Wort "Debugging"?</p>
+                        <div className="space-y-3 mt-4">
+                            <button onClick={()=>setAns(1)} className={`w-full p-4 rounded-xl border-4 text-left font-bold ${ans===1?'bg-red-200 border-red-500':'bg-white hover:bg-gray-50'}`}>A) Insekten (Käfer) im Internet züchten.</button>
+                            <button onClick={()=>setAns(2)} className={`w-full p-4 rounded-xl border-4 text-left font-bold ${ans===2?'bg-green-200 border-green-500':'bg-white hover:bg-gray-50'}`}>B) Das Suchen und Beheben von Fehlern im Code.</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 2 && <Button3D color="green" onClick={onComplete}>Korrekt! 🎉</Button3D>}
+                </div>
+            );
+        };
+        const L8_3 = ({ onComplete }) => {
+            const [q, setQ] = useState(0);
+            const [points, setPoints] = useState(0);
+            const [done, setDone] = useState(false);
+            const questions = [
+                { q: "Wenn ein Programm ewig Wasser in ein volles Glas schüttet, nennt man das...", a: ["Variablen-Bug", "Eine Endlosschleife", "Gutes Design"], c: 1 },
+                { q: "WENN 'Lava' DANN 'Leben = Leben + 1'. Welcher Fehler ist das?", a: ["Ein Logik-Fehler / Falsche Berechnung", "Ein Reihenfolge-Fehler"], c: 0 },
+                { q: "Computer brauchen eindeutige Befehle, weil...", a: ["Sie eigene Gedanken haben", "Sie keine Fantasie haben und nur genau das tun, was da steht"], c: 1 }
+            ];
+            const handleAns = (idx) => {
+                if(idx === questions[q].c) setPoints(p => p+1);
+                if(q < questions.length-1) setQ(q+1); else setDone(true);
+            };
+
+            if(done) {
+                return (
+                    <div className="text-center animate-pop-in">
+                        <i className="fa-solid fa-trophy text-8xl text-yellow-400 mb-6 animate-float block drop-shadow-xl"></i>
+                        <h2 className="text-4xl font-black mb-4 text-purple-900">HAUPTSPIEL GEWONNEN!</h2>
+                        <p className="text-2xl font-bold bg-yellow-100 p-4 rounded-2xl border-4 border-yellow-400 mb-8 shadow-lg">Quiz: {points} von {questions.length} richtig!</p>
+                        <Button3D color="purple" onClick={onComplete}>Zur Spezial-Welt! 🚀</Button3D>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title={`Das Final-Quiz (${q+1}/${questions.length})`} icon="fa-star" color="purple">
+                        <h3 className="font-bold text-2xl mb-6 text-purple-900">{questions[q].q}</h3>
+                        <div className="space-y-4">
+                            {questions[q].a.map((ans, i) => (
+                                <button key={i} onClick={()=>handleAns(i)} className="w-full text-left p-4 bg-white border-4 border-purple-200 hover:border-purple-500 rounded-2xl font-bold text-lg shadow-sm hover:shadow-md transition-all">
+                                    {ans}
+                                </button>
+                            ))}
+                        </div>
+                    </DialogBox>
+                </div>
+            );
+        };
+
+        // W9: EXPERTEN-WELT (Dimensionsriss - Harte Bugs)
+        const L9_1 = ({ onComplete }) => {
+            const [ans, setAns] = useState('');
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Verschachtelte Schleifen" icon="fa-infinity" color="black">
+                        <p className="text-green-400 glitch-text">WARNUNG: EXPERTEN-MODUS AKTIVIERT.</p>
+                        <p>Ein Programm stürzt ab, weil es zu oft klatscht. Wie oft klatscht es im Code?</p>
+                        <p className="bg-black border border-green-500 p-3 mt-2 rounded">
+                            WIEDERHOLE 3 MAL:<br/>
+                            &nbsp;&nbsp;WIEDERHOLE 2 MAL:<br/>
+                            &nbsp;&nbsp;&nbsp;&nbsp;Klatsche()
+                        </p>
+                        <input type="number" value={ans} onChange={e=>setAns(e.target.value)} className="w-full p-4 text-2xl font-black text-center bg-gray-800 text-green-400 border-2 border-green-500 rounded-xl outline-none mt-4" placeholder="Zahl eingeben..." />
+                    </DialogBox>
+                    {ans === '6' ? <Button3D color="black" onClick={onComplete}>BUG BERECHNET. WEITER.</Button3D> : (ans !== '' && <p className="text-center font-bold text-red-500">SYSTEMFEHLER: 3 * 2 = ?</p>)}
+                </div>
+            );
+        };
+        const L9_2 = ({ onComplete }) => {
+            const [ans, setAns] = useState(0);
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Logik-Gatter Bug" icon="fa-microchip" color="black">
+                        <p className="text-green-400">Ein Roboter greift Unschuldige an statt Diebe!</p>
+                        <p className="bg-black border border-green-500 p-3 mt-2 rounded text-sm">
+                            WENN (Ist_Maskiert ODER Ist_Dunkel):<br/>
+                            &nbsp;&nbsp;Angreifen()<br/>
+                            SONST:<br/>
+                            &nbsp;&nbsp;Grüßen()
+                        </p>
+                        <p className="mt-4">Jemand ohne Maske geht nachts (es ist dunkel) vorbei. Was macht der verbuggte Roboter?</p>
+                        <div className="space-y-3 mt-4">
+                            <button onClick={()=>setAns(1)} className={`w-full p-3 rounded-xl border-2 font-bold text-left ${ans===1?'bg-gray-700 text-green-400 border-green-500':'bg-gray-800 text-green-700 border-gray-600'}`}>A) Er grüßt freundlich.</button>
+                            <button onClick={()=>setAns(2)} className={`w-full p-3 rounded-xl border-2 font-bold text-left ${ans===2?'bg-gray-700 text-green-400 border-green-500':'bg-gray-800 text-green-700 border-gray-600'}`}>B) Er greift an! (Wegen "ODER" reicht es, dass es dunkel ist)</button>
+                        </div>
+                    </DialogBox>
+                    {ans === 2 && <Button3D color="black" onClick={onComplete}>BUG IDENTIFIZIERT.</Button3D>}
+                </div>
+            );
+        };
+        const L9_3 = ({ onComplete }) => {
+            const [ans, setAns] = useState('');
+            return (
+                <div className="text-center animate-pop-in">
+                    <i className="fa-solid fa-bug text-7xl text-red-500 mb-4 animate-float block glitch-text shadow-[0_0_20px_red]"></i>
+                    <h2 className="text-3xl font-black mb-4 text-green-400 glitch-text">ULTIMATIVER BOSS: DER MATRIX-BUG</h2>
+                    <p className="bg-black p-4 rounded-xl border-4 border-red-500 font-bold mb-6 font-mono text-left text-green-400 shadow-[0_0_15px_red]">
+                        X = 1<br/>
+                        WIEDERHOLE 4 MAL:<br/>
+                        &nbsp;&nbsp;X = X + 2<br/>
+                        <br/>
+                        <span className="text-red-500">SYSTEM FRAGT: WAS IST X AM ENDE?</span>
+                    </p>
+                    <input type="number" value={ans} onChange={e=>setAns(e.target.value)} placeholder="_" className="w-32 p-4 text-4xl font-mono text-black bg-green-400 text-center rounded-xl mb-6 outline-none shadow-[0_0_10px_#00ff00]" />
+                    {ans === '9' ? <Button3D color="black" onClick={onComplete}>MATRIX GEFIXT! 🏰</Button3D> : (ans !== '' && <p className="text-red-500 font-bold mb-4 glitch-text">FALSCH. (1 + 2 + 2 + 2 + 2)</p>)}
+                </div>
+            );
+        };
+
+
+        // --- WELT DEFINITIONEN ---
+        const WORLDS = [
+            { id: 1, title: "Tal der Anleitungen", gradient: "from-green-300 to-green-500", icon: "fa-scroll", levels: [{n: "1-1", C: L1_1}, {n: "1-2", C: L1_2}, {n: "1-3", C: L1_3, boss: true}] },
+            { id: 2, title: "Wüste der Verwirrung", gradient: "from-yellow-300 to-amber-500", icon: "fa-robot", levels: [{n: "2-1", C: L2_1}, {n: "2-2", C: L2_2}, {n: "2-3", C: L2_3, boss: true}] },
+            { id: 3, title: "Wasserfall d. Reihenfolge", gradient: "from-blue-300 to-blue-600", icon: "fa-list-ol", levels: [{n: "3-1", C: L3_1}, {n: "3-2", C: L3_2}, {n: "3-3", C: L3_3, boss: true}] },
+            { id: 4, title: "Dschungel der Schleifen", gradient: "from-emerald-400 to-green-700", icon: "fa-rotate-right", levels: [{n: "4-1", C: L4_1}, {n: "4-2", C: L4_2}, {n: "4-3", C: L4_3, boss: true}] },
+            { id: 5, title: "Eiswelt der Bedingungen", gradient: "from-cyan-200 to-cyan-500", icon: "fa-code-branch", levels: [{n: "5-1", C: L5_1}, {n: "5-2", C: L5_2}, {n: "5-3", C: L5_3, boss: true}] },
+            { id: 6, title: "Wolkenstadt d. Variablen", gradient: "from-sky-300 to-indigo-400", icon: "fa-box", levels: [{n: "6-1", C: L6_1}, {n: "6-2", C: L6_2}, {n: "6-3", C: L6_3, boss: true}] },
+            { id: 7, title: "Lavaburg der Fehler", gradient: "from-red-500 to-orange-600", icon: "fa-bug", levels: [{n: "7-1", C: L7_1}, {n: "7-2", C: L7_2}, {n: "7-3", C: L7_3, boss: true}] },
+            { id: 8, title: "Sternenwelt Finale", gradient: "from-indigo-800 to-purple-800", textWhite: true, icon: "fa-star", levels: [{n: "8-1", C: L8_1}, {n: "8-2", C: L8_2}, {n: "8-3", C: L8_3, boss: true}] },
+            { id: 9, title: "Dimensionsriss (PRO)", gradient: "from-gray-900 to-black", textWhite: true, icon: "fa-infinity", levels: [{n: "9-1", C: L9_1}, {n: "9-2", C: L9_2}, {n: "9-3", C: L9_3, boss: true}] },
+        ];
+
+        // --- HAUPT-APP ---
+        const App = () => {
+            const [maxUnlocked, setMaxUnlocked] = useState('1-1');
+            const [view, setView] = useState('overview'); 
+            const [activeWorldId, setActiveWorldId] = useState(1);
+            const [activeLevelId, setActiveLevelId] = useState(null);
+
+            // Cheat-Modal State
+            const [showCheatModal, setShowCheatModal] = useState(false);
+            const [cheatPw, setCheatPw] = useState('');
+            const [cheatError, setCheatError] = useState(false);
+
+            // Logik-Hilfen
+            const isUnlocked = (lvlId) => {
+                const [w1, l1] = lvlId.split('-').map(Number);
+                const [w2, l2] = maxUnlocked.split('-').map(Number);
+                if (w1 < w2) return true;
+                if (w1 === w2 && l1 <= l2) return true;
+                return false;
+            };
+
+            const isCompleted = (lvlId) => {
+                const [w1, l1] = lvlId.split('-').map(Number);
+                const [w2, l2] = maxUnlocked.split('-').map(Number);
+                if (w1 < w2) return true;
+                if (w1 === w2 && l1 < l2) return true;
+                return false;
+            };
+
+            const getNextLvl = (currId) => {
+                let [w, l] = currId.split('-').map(Number);
+                if(w === 9 && l === 3) return 'win'; // Ende nach Welt 9
+                if(l < 3) return `${w}-${l+1}`;
+                return `${w+1}-1`;
+            };
+
+            const onLevelComplete = () => {
+                const nextId = getNextLvl(activeLevelId);
+                if (nextId === 'win') {
+                    setView('win');
+                } else {
+                    const [nextW, nextL] = nextId.split('-').map(Number);
+                    const [currW, currL] = activeLevelId.split('-').map(Number);
+                    
+                    if (!isUnlocked(nextId)) setMaxUnlocked(nextId);
+                    
+                    if (nextW > currW) setView('overview');
+                    else setView('world');
+                }
+            };
+
+            const handleCheatSubmit = () => {
+                if (cheatPw === "Sonnenschein") {
+                    setMaxUnlocked('9-3'); // Alles freischalten
+                    setShowCheatModal(false);
+                    setCheatPw('');
+                    setCheatError(false);
+                } else {
+                    setCheatError(true);
+                }
+            };
+
+            // VIEWS
+            if (view === 'win') {
+                return (
+                    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+                        <div className="bg-gray-900 p-12 rounded-[3rem] shadow-[0_0_50px_#00ff00] text-center max-w-2xl border-4 border-green-500 animate-pop-in relative overflow-hidden">
+                            {/* Matrix Style BG */}
+                            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'linear-gradient(rgba(0, 255, 0, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 0, 0.2) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+                            
+                            <i className="fa-solid fa-user-astronaut text-9xl text-green-400 mb-8 animate-float block drop-shadow-xl glitch-text"></i>
+                            <h1 className="text-6xl font-black text-green-500 mb-6 uppercase tracking-widest drop-shadow-md glitch-text">MASTER-CODER!</h1>
+                            <p className="text-2xl text-green-300 mb-8 font-mono">Du hast jeden noch so fiesen Bug aufgespürt und repariert. Super Algo World ist wieder sicher!</p>
+                            <Button3D color="black" onClick={() => { setMaxUnlocked('1-1'); setView('overview'); }}>SYSTEM NEUSTART</Button3D>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (view === 'level') {
+                let LvlComp = null;
+                WORLDS.forEach(w => w.levels.forEach(l => { if(l.n === activeLevelId) LvlComp = l.C; }));
+                
+                const isNeon = activeWorldId === 9;
+                
+                return (
+                    <div className={`min-h-screen ${isNeon ? 'bg-black' : 'bg-gray-900'} flex items-center justify-center p-4 md:p-8`}>
+                        <div className={`w-full max-w-4xl rounded-[2rem] overflow-hidden animate-fade-in-up border-8 ${isNeon ? 'bg-gray-900 border-cyan-600 shadow-[0_0_30px_rgba(0,255,255,0.3)]' : 'bg-white border-gray-700 shadow-[0_20px_0_rgba(0,0,0,0.3)]'}`}>
+                            <div className={`p-4 flex justify-between items-center border-b-4 ${isNeon ? 'bg-black neon-blue-text border-cyan-800' : 'bg-gray-800 text-white border-gray-900'}`}>
+                                <button onClick={()=>setView('world')} className={`${isNeon ? 'bg-gray-900 border-cyan-700 hover:bg-gray-800 neon-blue-text' : 'bg-gray-700 border-gray-600 hover:bg-gray-600 text-white'} px-4 py-2 rounded-xl font-bold shadow-sm transition-colors border-2`}><i className="fa-solid fa-arrow-left"></i> Welt verlassen</button>
+                                <h2 className={`font-black text-xl tracking-widest ${isNeon ? 'font-mono neon-blue-text' : ''}`}>LEVEL {activeLevelId}</h2>
+                                <div className="w-32"></div>
+                            </div>
+                            <div className="p-8 md:p-12">
+                                {LvlComp && <LvlComp onComplete={onLevelComplete} />}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (view === 'world') {
+                const W = WORLDS.find(w => w.id === activeWorldId);
+                const isNeon = W.id === 9;
+                
+                // Fortschritt berechnen
+                const [maxW, maxL] = maxUnlocked.split('-').map(Number);
+                let progress = 0;
+                if (maxW > W.id) progress = 100;
+                else if (maxW === W.id) progress = Math.round(((maxL - 1) / W.levels.length) * 100);
+
+                return (
+                    <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 md:p-8">
+                        <div className="w-full max-w-5xl animate-pop-in">
+                            
+                            {/* Kopfbalken über der Map */}
+                            <div className="flex justify-between items-center mb-4 text-white">
+                                <button onClick={()=>setView('overview')} className="bg-red-600 hover:bg-red-500 px-5 py-3 rounded-xl font-black shadow-md transition-colors border-b-4 border-red-800 flex items-center gap-2">
+                                    <i className="fa-solid fa-arrow-left"></i> Übersicht
+                                </button>
+                            </div>
+
+                            {/* Die 2D Map */}
+                            <div className={`relative w-full aspect-square md:aspect-video rounded-3xl overflow-hidden border-8 shadow-2xl ${isNeon ? 'border-cyan-800 bg-black shadow-[0_0_40px_rgba(0,255,255,0.2)]' : 'border-gray-800 bg-sky-200'}`}>
+                                
+                                <WorldBackground worldId={W.id} />
+
+                                {/* UI: Welt Name */}
+                                <div className={`absolute top-4 left-4 font-black px-4 py-2 rounded-xl shadow-lg border-2 z-30 uppercase tracking-widest text-sm md:text-base ${isNeon ? 'bg-black neon-blue-text border-cyan-600' : 'bg-gray-800 text-white border-gray-600'}`}>
+                                    Welt {W.id}: {W.title}
+                                </div>
+
+                                {/* UI: Fortschritt */}
+                                <div className={`absolute top-4 right-4 font-black px-4 py-2 rounded-xl shadow-lg border-2 z-30 w-48 ${isNeon ? 'bg-black text-cyan-400 border-cyan-600' : 'bg-white text-gray-800 border-gray-200'}`}>
+                                    <div className={`flex justify-between text-xs mb-1 ${isNeon ? 'text-cyan-600' : 'text-gray-500'}`}>
+                                        <span>FORTSCHRITT</span><span>{progress}%</span>
+                                    </div>
+                                    <div className={`w-full h-3 rounded-full border overflow-hidden ${isNeon ? 'bg-gray-900 border-cyan-800' : 'bg-gray-200 border-gray-300'}`}>
+                                        <div className={`h-full transition-all ${isNeon ? 'bg-cyan-500 shadow-[0_0_10px_#00ffff]' : 'bg-blue-500'}`} style={{width: `${progress}%`}}></div>
+                                    </div>
+                                </div>
+
+                                {/* Der gestrichelte Pfad */}
+                                <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
+                                    <line x1="20%" y1="75%" x2="55%" y2="55%" stroke={isNeon ? '#00ffff' : '#eab308'} strokeWidth="6" strokeDasharray="10 10" strokeLinecap="round" />
+                                    <line x1="20%" y1="75%" x2="55%" y2="55%" stroke={isNeon ? '#008888' : '#ca8a04'} strokeWidth="6" strokeDasharray="10 10" transform="translate(0, 4)" className="opacity-50" />
+                                    
+                                    <line x1="55%" y1="55%" x2="30%" y2="25%" stroke={isNeon ? '#00ffff' : '#eab308'} strokeWidth="6" strokeDasharray="10 10" strokeLinecap="round" />
+                                    <line x1="55%" y1="55%" x2="30%" y2="25%" stroke={isNeon ? '#008888' : '#ca8a04'} strokeWidth="6" strokeDasharray="10 10" transform="translate(0, 4)" className="opacity-50" />
+                                </svg>
+
+                                {/* Level Knotenpunkte */}
+                                {W.levels.map((l, idx) => {
+                                    const unl = isUnlocked(l.n);
+                                    const comp = isCompleted(l.n);
+                                    const curr = l.n === maxUnlocked;
+                                    
+                                    const isAlgoHere = (W.id === maxW && (idx + 1) === maxL) || (W.id < maxW && idx === W.levels.length - 1);
+                                    const pos = idx === 0 ? {left:'20%', top:'75%'} : idx === 1 ? {left:'55%', top:'55%'} : {left:'30%', top:'25%'};
+
+                                    return (
+                                        <div key={l.n} className="absolute z-20 transform -translate-x-1/2 -translate-y-1/2" style={pos}>
+                                            {idx === 0 && <div className="absolute -bottom-10 -left-10 bg-red-600 text-white font-black text-sm px-3 py-1 transform -rotate-12 border-2 border-white rounded shadow-lg z-30">START</div>}
+                                            
+                                            {isAlgoHere && (
+                                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 pointer-events-none">
+                                                    <AlgoCharacter />
+                                                </div>
+                                            )}
+
+                                            <button 
+                                                disabled={!unl}
+                                                onClick={() => { setActiveLevelId(l.n); setView('level'); }}
+                                                className={`relative flex items-center justify-center shadow-xl transition-transform hover:scale-110 
+                                                    ${l.boss ? 'w-24 h-24 rounded-3xl' : 'w-16 h-16 rounded-full'}
+                                                    ${curr ? (isNeon ? 'bg-black border-4 border-cyan-400 ring-4 ring-cyan-500 animate-pulse text-cyan-400' : 'bg-yellow-400 border-4 border-white ring-4 ring-yellow-400 animate-pulse text-yellow-900') : 
+                                                      comp ? (isNeon ? 'bg-cyan-600 border-4 border-cyan-300 opacity-90 text-black' : 'bg-blue-500 border-4 border-white opacity-90 text-white') : 
+                                                      (isNeon ? 'bg-gray-900 border-4 border-gray-700 opacity-90 text-gray-700' : 'bg-gray-400 border-4 border-gray-300 opacity-90 text-gray-200')}`}
+                                            >
+                                                {curr ? <i className={`fa-solid fa-play text-2xl ${isNeon ? '' : 'ml-1'} drop-shadow-sm`}></i> :
+                                                 comp ? <i className="fa-solid fa-check text-2xl drop-shadow-sm"></i> :
+                                                 <i className="fa-solid fa-lock text-2xl drop-shadow-sm"></i>}
+                                                
+                                                {l.boss && !comp && !curr && <i className={`fa-brands fa-fort-awesome absolute text-5xl opacity-20 pointer-events-none ${isNeon ? 'text-cyan-900' : 'text-gray-500'}`}></i>}
+                                                {l.boss && (comp || curr) && <i className={`fa-brands fa-fort-awesome absolute text-5xl opacity-30 pointer-events-none ${isNeon ? 'text-black' : 'text-white'}`}></i>}
+                                            </button>
+                                            
+                                            <div className={`absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap text-xs font-bold px-3 py-1 rounded-full pointer-events-none ${isNeon ? 'bg-black text-cyan-400 border border-cyan-700' : 'bg-gray-900/80 text-white'}`}>
+                                                {l.boss ? 'Boss-Burg' : `Level ${idx + 1}`}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // OVERVIEW MAP (3x3 Grid für 9 Welten)
+            return (
+                <div className="min-h-screen bg-sky-300 pb-20 relative overflow-hidden">
+                    {/* Cheat Modal UI */}
+                    {showCheatModal && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[100] animate-pop-in p-4">
+                            <div className="bg-white p-8 rounded-3xl max-w-sm w-full text-center shadow-[0_0_50px_rgba(255,255,0,0.5)]">
+                                <i className="fa-solid fa-sun text-6xl text-yellow-400 mb-4 animate-[spin_10s_linear_infinite]"></i>
+                                <h2 className="text-2xl font-black mb-4 text-yellow-600">Geheim-Menü</h2>
+                                <input
+                                    type="password"
+                                    value={cheatPw}
+                                    onChange={(e) => setCheatPw(e.target.value)}
+                                    placeholder="Passwort..."
+                                    className="w-full p-4 text-xl border-4 border-yellow-300 rounded-xl mb-4 text-center focus:outline-none focus:border-yellow-500"
+                                />
+                                {cheatError && <p className="text-red-500 font-bold mb-4">Falsches Passwort!</p>}
+                                <div className="flex gap-4">
+                                    <button onClick={() => {setShowCheatModal(false); setCheatError(false); setCheatPw('');}} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition-colors">Abbrechen</button>
+                                    <button onClick={handleCheatSubmit} className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-bold py-3 rounded-xl border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1 transition-all">Freischalten</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Versteckter Sonnen-Button oben rechts */}
+                    <button 
+                        onClick={() => setShowCheatModal(true)} 
+                        className="absolute top-4 right-4 text-yellow-400 opacity-30 hover:opacity-100 hover:rotate-180 transition-all duration-500 z-50 text-4xl cursor-pointer"
+                    >
+                        <i className="fa-solid fa-sun"></i>
+                    </button>
+
+                    {/* Wolken Deko */}
+                    <div className="absolute top-10 left-10 text-white/50 text-8xl animate-float" style={{animationDelay: '0s'}}><i className="fa-solid fa-cloud"></i></div>
+                    <div className="absolute top-40 right-20 text-white/50 text-9xl animate-float" style={{animationDelay: '1s'}}><i className="fa-solid fa-cloud"></i></div>
+
+                    <div className="max-w-6xl mx-auto p-4 md:p-8 relative z-10 animate-fade-in-up">
+                        <div className="bg-white/90 p-6 rounded-[2rem] shadow-xl border-b-8 border-white mb-12 text-center inline-block mx-auto transform -rotate-2">
+                            <h1 className="text-5xl md:text-7xl font-black text-blue-600 tracking-tighter drop-shadow-md">Super Algo World <span className="text-green-500">3D</span></h1>
+                        </div>
+
+                        {/* 3x3 Grid für genau 9 Welten */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                            {WORLDS.map((w, i) => {
+                                const wUnlocked = isUnlocked(`${w.id}-1`);
+                                const [maxW, maxL] = maxUnlocked.split('-').map(Number);
+                                const isAlgoHereOnMap = w.id === maxW;
+                                const isNeon = w.id === 9;
+                                
+                                return (
+                                    <button 
+                                        key={w.id} 
+                                        disabled={!wUnlocked}
+                                        onClick={() => { setActiveWorldId(w.id); setView('world'); }}
+                                        className={`island-3d relative flex flex-col items-center p-6 rounded-[2.5rem] bg-gradient-to-b ${wUnlocked ? w.gradient : 'from-gray-400 to-gray-600'} ${isNeon && wUnlocked ? 'border-cyan-600 shadow-[0_0_20px_rgba(0,255,255,0.4)]' : ''} text-white border-4 ${wUnlocked && !isNeon ? 'border-white/50' : (!wUnlocked ? 'border-gray-500' : '')} ${wUnlocked ? 'cursor-pointer hover:brightness-110' : 'cursor-not-allowed opacity-80'} `}
+                                        style={{ animationDelay: `${i * 100}ms` }}
+                                    >
+                                        <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-inner mb-4 backdrop-blur-sm ${isNeon ? 'bg-black border-2 border-cyan-500 neon-blue-text' : 'bg-white/20'}`}>
+                                            {wUnlocked ? <i className={`fa-solid ${w.icon}`}></i> : <i className="fa-solid fa-lock text-gray-300"></i>}
+                                        </div>
+                                        <h2 className={`font-black text-2xl mb-2 drop-shadow-md text-center ${isNeon ? 'neon-blue-text font-mono' : ''}`}>{w.title}</h2>
+                                        <div className={`px-4 py-1 rounded-full font-bold text-sm ${isNeon ? 'bg-cyan-900/50 neon-blue-text border border-cyan-600' : 'bg-black/20'}`}>Welt {w.id}</div>
+                                        
+                                        {/* Algo auf der Weltkarte */}
+                                        {wUnlocked && isAlgoHereOnMap && (
+                                            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
+                                                <AlgoCharacter />
+                                            </div>
+                                        )}
+
+                                        {/* Neue Welt Indikator */}
+                                        {wUnlocked && maxUnlocked.startsWith(`${w.id}-`) && (
+                                            <div className={`absolute -top-4 -right-4 text-white font-black px-4 py-2 rounded-full shadow-lg animate-bounce border-2 ${isNeon ? 'bg-black border-cyan-500 text-cyan-500' : 'bg-red-500 border-white'}`}>
+                                                HIER!
+                                            </div>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
