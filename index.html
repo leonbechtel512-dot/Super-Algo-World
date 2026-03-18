@@ -121,10 +121,25 @@
         const MCLevel = ({ title, icon, color, text, options, onComplete }) => {
             const [opts, setOpts] = useState(() => shuffleArray(options));
             const [errorMsg, setErrorMsg] = useState('');
+            const [selectedId, setSelectedId] = useState(null);
+            const [isLocked, setIsLocked] = useState(false);
 
-            const handlePick = (opt) => {
-                if(opt.correct) { setErrorMsg(''); onComplete(); } 
-                else { setErrorMsg(opt.msg || 'Falsch! Denk noch einmal genau nach.'); setOpts(shuffleArray([...opts])); }
+            const handlePick = async (opt) => {
+                if(isLocked) return;
+                setIsLocked(true);
+                setSelectedId(opt.text);
+
+                if(opt.correct) { 
+                    setErrorMsg(''); 
+                    await sleep(800);
+                    onComplete(); 
+                } else { 
+                    setErrorMsg(opt.msg || 'Falsch! Denk noch einmal genau nach.'); 
+                    await sleep(1200);
+                    setSelectedId(null);
+                    setOpts(shuffleArray([...opts])); 
+                    setIsLocked(false);
+                }
             };
 
             return (
@@ -132,11 +147,17 @@
                     <DialogBox title={title} icon={icon} color={color}>
                         <p className="mb-4">{text}</p>
                         <div className="space-y-3">
-                            {opts.map((opt, i) => (
-                                <button key={i} onClick={()=>handlePick(opt)} className="w-full p-4 rounded-xl border-4 font-bold text-left bg-white hover:bg-gray-50 transition-all text-gray-800">
-                                    {opt.text}
-                                </button>
-                            ))}
+                            {opts.map((opt, i) => {
+                                let btnStyle = "bg-white hover:bg-gray-50 border-gray-200 text-gray-800";
+                                if (selectedId === opt.text) {
+                                    btnStyle = opt.correct ? "bg-green-100 border-green-500 text-green-900" : "bg-red-100 border-red-500 text-red-900";
+                                }
+                                return (
+                                    <button key={i} disabled={isLocked} onClick={()=>handlePick(opt)} className={`w-full p-4 rounded-xl border-4 font-bold text-left transition-all ${btnStyle}`}>
+                                        {opt.text}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </DialogBox>
                     {errorMsg && <p className="text-center font-bold text-red-500 animate-pop-in">{errorMsg}</p>}
@@ -151,27 +172,36 @@
             const [status, setStatus] = useState('playing'); // playing, gameover, won
             const [msg, setMsg] = useState('');
             const [shake, setShake] = useState(false);
+            const [selectedId, setSelectedId] = useState(null);
+            const [isLocked, setIsLocked] = useState(false);
 
-            const handlePick = (opt) => {
-                if (status !== 'playing') return;
+            const handlePick = async (opt) => {
+                if (status !== 'playing' || isLocked) return;
+                setIsLocked(true);
+                setSelectedId(opt.text);
                 
                 if (opt.correct) {
                     setMsg('Richtig!');
+                    await sleep(800);
                     if (stage < 2) {
-                        setTimeout(() => {
-                            setStage(s => s + 1);
-                            setOpts(shuffleArray(questions[stage + 1].options));
-                            setMsg('');
-                        }, 1000);
+                        setStage(s => s + 1);
+                        setOpts(shuffleArray(questions[stage + 1].options));
+                        setMsg('');
+                        setSelectedId(null);
+                        setIsLocked(false);
                     } else {
-                        setTimeout(() => setStatus('won'), 1000);
+                        setStatus('won');
                     }
                 } else {
                     setShake(true); setTimeout(() => setShake(false), 300);
+                    setMsg('Falsch!');
+                    await sleep(1000);
                     if (lives > 1) {
                         setLives(l => l - 1);
-                        setMsg('Falsch! Du verlierst ein Leben!');
+                        setMsg('Du verlierst ein Leben!');
                         setOpts(shuffleArray([...opts]));
+                        setSelectedId(null);
+                        setIsLocked(false);
                     } else {
                         setLives(0);
                         setStatus('gameover');
@@ -182,6 +212,8 @@
             const restart = () => {
                 setLives(3); setStage(0); setStatus('playing'); setMsg('');
                 setOpts(shuffleArray(questions[0].options));
+                setSelectedId(null);
+                setIsLocked(false);
             };
 
             if (status === 'won') {
@@ -223,11 +255,17 @@
                     </p>
 
                     <div className="space-y-3 mb-6 text-left">
-                        {opts.map((opt, i) => (
-                            <button key={i} onClick={() => handlePick(opt)} className={`w-full p-4 rounded-2xl border-4 font-bold text-sm bg-white hover:border-gray-400 transition-colors ${msg==='Richtig!' && opt.correct ? 'border-green-500 bg-green-100' : 'border-gray-300'}`}>
-                                {opt.text}
-                            </button>
-                        ))}
+                        {opts.map((opt, i) => {
+                            let btnStyle = "bg-white hover:border-gray-400 border-gray-300 text-gray-800";
+                            if (selectedId === opt.text) {
+                                btnStyle = opt.correct ? "border-green-500 bg-green-100 text-green-900" : "border-red-500 bg-red-100 text-red-900";
+                            }
+                            return (
+                                <button key={i} disabled={isLocked} onClick={() => handlePick(opt)} className={`w-full p-4 rounded-2xl border-4 font-bold text-sm transition-colors ${btnStyle}`}>
+                                    {opt.text}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {msg && <p className={`font-black text-xl ${msg==='Richtig!' ? 'text-green-500' : 'text-red-500'}`}>{msg}</p>}
@@ -254,10 +292,10 @@
                 title="Abläufe im Alltag" icon="fa-calendar-day" color="yellow"
                 text="Algo fragt: Ein Algorithmus ist ein Ablauf. Welches dieser Beispiele ist ein Ablauf, bei dem man die einzelnen Schritte auf keinen Fall vertauschen darf?"
                 options={[
-                    { text: "A) Ein Glas Wasser einschenken und austrinken.", correct: true },
-                    { text: "B) Schulsachen in den Ranzen packen (Heft, Stifte, Buch).", correct: false, msg: "Ob du erst das Heft oder den Stift einpackst, ist für das Ergebnis egal." },
-                    { text: "C) Das Zimmer aufräumen (Müll wegwerfen, Bett machen).", correct: false, msg: "Die Reihenfolge beim Aufräumen ist meistens egal." },
-                    { text: "D) Freunde auf dem Schulhof begrüßen.", correct: false, msg: "Wen du zuerst begrüßt, ändert nichts am Ergebnis." }
+                    { text: "Ein Glas Wasser einschenken und austrinken.", correct: true },
+                    { text: "Schulsachen in den Ranzen packen (Heft, Stifte, Buch).", correct: false, msg: "Ob du erst das Heft oder den Stift einpackst, ist für das Ergebnis egal." },
+                    { text: "Das Zimmer aufräumen (Müll wegwerfen, Bett machen).", correct: false, msg: "Die Reihenfolge beim Aufräumen ist meistens egal." },
+                    { text: "Freunde auf dem Schulhof begrüßen.", correct: false, msg: "Wen du zuerst begrüßt, ändert nichts am Ergebnis." }
                 ]}
                 onComplete={onComplete}
             />
@@ -266,19 +304,19 @@
             <MCBossGauntlet
                 title="Boss: Anweisungen erkennen" icon="fa-bullhorn" colorClass="bg-green-100 border-green-300 text-green-900" textClass="text-green-600"
                 questions={[
-                    { q: "Runde 1: Welche dieser Aussagen ist eine klare Anweisung (ein Befehl)?", options: [
+                    { q: "Welche dieser Aussagen ist eine klare Anweisung (ein Befehl)?", options: [
                         { text: "Gehe zwei Schritte vorwärts.", correct: true },
                         { text: "Das Wetter ist heute schön.", correct: false },
                         { text: "Roboter sind wirklich cool.", correct: false },
                         { text: "Ein rotes Auto.", correct: false }
                     ]},
-                    { q: "Runde 2: Finde die versteckte Anweisung!", options: [
+                    { q: "Finde die versteckte Anweisung!", options: [
                         { text: "Drehe dich um 90 Grad nach rechts.", correct: true },
                         { text: "In der Ecke liegt eine Socke.", correct: false },
                         { text: "Wo ist mein Schulbuch?", correct: false },
                         { text: "Ein Algorithmus ist eine Anleitung.", correct: false }
                     ]},
-                    { q: "Runde 3: Welcher Satz gehört in einen funktionierenden Algorithmus?", options: [
+                    { q: "Welcher Satz gehört in einen funktionierenden Algorithmus?", options: [
                         { text: "Hebe den Gegenstand vor dir auf.", correct: true },
                         { text: "Das Zimmer ist sehr unordentlich.", correct: false },
                         { text: "Ich mag keine Mathematik.", correct: false },
@@ -304,10 +342,10 @@
                 title="Code im Kopf lesen" icon="fa-brain" color="blue"
                 text="Algo sagt: Robbie schaut nach oben. Was passiert, wenn er diesen Code abarbeitet: 1) Gehe 1 Feld vorwärts. 2) Drehe 90 Grad rechts. 3) Gehe 1 Feld vorwärts. 4) Drehe 90 Grad rechts. 5) Gehe 1 Feld vorwärts."
                 options={[
-                    { text: "A) Er steht genau rechts neben seinem Startpunkt.", correct: true },
-                    { text: "B) Er steht wieder exakt auf seinem Startpunkt.", correct: false, msg: "Zeichne den Weg (Vor, Rechts, Vor, Rechts, Vor) mal mit dem Finger auf den Tisch!" },
-                    { text: "C) Er steht zwei Felder vor seinem Startpunkt.", correct: false, msg: "Er ist zwischendurch abgebogen!" },
-                    { text: "D) Er steht links neben seinem Startpunkt.", correct: false, msg: "Achte auf die Rechts-Drehungen!" }
+                    { text: "Er steht genau rechts neben seinem Startpunkt.", correct: true },
+                    { text: "Er steht wieder exakt auf seinem Startpunkt.", correct: false, msg: "Zeichne den Weg (Vor, Rechts, Vor, Rechts, Vor) mal mit dem Finger auf den Tisch!" },
+                    { text: "Er steht zwei Felder vor seinem Startpunkt.", correct: false, msg: "Er ist zwischendurch abgebogen!" },
+                    { text: "Er steht links neben seinem Startpunkt.", correct: false, msg: "Achte auf die Rechts-Drehungen!" }
                 ]}
                 onComplete={onComplete}
             />
@@ -438,7 +476,7 @@
                         </div>
                     )}
 
-                    {status === 'running' && <p className="text-blue-600 font-black animate-pulse">Roboter fährt...</p>}
+                    {status === 'running' && <p className="text-blue-600 font-black animate-pulse">Fliegt...</p>}
                     {status === 'fail' && <div className="animate-pop-in"><p className="text-red-500 font-bold mb-2">{msg}</p><Button3D color="red" className="py-2" onClick={reset}>Neustart</Button3D></div>}
                     {status === 'win' && <p className="text-green-600 font-black text-xl animate-bounce">{msg}</p>}
                 </div>
@@ -465,10 +503,10 @@
                 title="Mensch vs. Maschine" icon="fa-brain" color="blue"
                 text="Warum müssen wir beim Programmieren von Computern so streng auf diese 4 Regeln achten, während wir mit Menschen normal reden können?"
                 options={[
-                    { text: "A) Ein Mensch versteht auch ungenaue Dinge. Ein Computer braucht exakte Details.", correct: true },
-                    { text: "B) Computer sind intelligenter und entscheiden selbst, was gemeint ist.", correct: false, msg: "Computer denken NICHT selbst mit!" },
-                    { text: "C) Roboter haben keine Ohren.", correct: false, msg: "Es geht um die Logik, nicht um Ohren." },
-                    { text: "D) Algorithmen sind nur für Maschinen gemacht.", correct: false, msg: "Auch Kochrezepte sind Algorithmen." }
+                    { text: "Ein Mensch versteht auch ungenaue Dinge. Ein Computer braucht exakte Details.", correct: true },
+                    { text: "Computer sind intelligenter und entscheiden selbst, was gemeint ist.", correct: false, msg: "Computer denken NICHT selbst mit!" },
+                    { text: "Roboter haben keine Ohren.", correct: false, msg: "Es geht um die Logik, nicht um Ohren." },
+                    { text: "Algorithmen sind nur für Maschinen gemacht.", correct: false, msg: "Auch Kochrezepte sind Algorithmen." }
                 ]}
                 onComplete={onComplete}
             />
@@ -477,19 +515,19 @@
             <MCBossGauntlet
                 title="Boss: Der Bäcker" icon="fa-cake-candles" colorClass="bg-blue-100 border-blue-300 text-blue-900" textClass="text-blue-600"
                 questions={[
-                    { q: "Runde 1: Ein Kochrezept sagt: 'Backe es ca. eine Stunde'. Welche Regel wird gebrochen?", options: [
+                    { q: "Ein Kochrezept sagt: 'Backe es ca. eine Stunde'. Welche Regel wird gebrochen?", options: [
                         { text: "Eindeutigkeit ('ca.' ist ungenau)", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false }
                     ]},
-                    { q: "Runde 2: Im Rezept steht: 'Schütte das Mehl in die Schüssel. Öffne danach die Mehltüte'. Welche Regel ist gebrochen?", options: [
+                    { q: "Im Rezept steht: 'Schütte das Mehl in die Schüssel. Öffne danach die Mehltüte'. Welche Regel ist gebrochen?", options: [
                         { text: "Reihenfolge (Erst öffnen, dann schütten!)", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false }
                     ]},
-                    { q: "Runde 3: 'Rühre den Teig für immer weiter'. Welche Regel ist gebrochen?", options: [
+                    { q: "'Rühre den Teig für immer weiter'. Welche Regel ist gebrochen?", options: [
                         { text: "Endlichkeit (Der Roboter stoppt nie)", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false },
@@ -519,10 +557,10 @@
                 title="Der ungenaue Koch" icon="fa-spoon" color="orange"
                 text="Roboter können mit ungenauen Mengen nicht umgehen. Welcher Befehl ist für einen Roboter absolut eindeutig?"
                 options={[
-                    { text: "A) 'Schütte genau 5 Gramm Salz hinein.'", correct: true },
-                    { text: "B) 'Schütte eine Prise Salz hinein.'", correct: false, msg: "Eine Prise ist bei jedem unterschiedlich groß!" },
-                    { text: "C) 'Mache den Kuchen salzig.'", correct: false, msg: "Wie salzig? Das ist nicht eindeutig." },
-                    { text: "D) 'Ein bisschen Salz schadet nie.'", correct: false, msg: "'Ein bisschen' versteht kein Computer." }
+                    { text: "'Schütte genau 5 Gramm Salz hinein.'", correct: true },
+                    { text: "'Schütte eine Prise Salz hinein.'", correct: false, msg: "Eine Prise ist bei jedem unterschiedlich groß!" },
+                    { text: "'Mache den Kuchen salzig.'", correct: false, msg: "Wie salzig? Das ist nicht eindeutig." },
+                    { text: "'Ein bisschen Salz schadet nie.'", correct: false, msg: "'Ein bisschen' versteht kein Computer." }
                 ]}
                 onComplete={onComplete}
             />
@@ -531,19 +569,19 @@
             <MCBossGauntlet
                 title="Boss: Der Navigationstrick" icon="fa-street-view" colorClass="bg-emerald-100 border-emerald-300 text-emerald-900" textClass="text-emerald-600"
                 questions={[
-                    { q: "Runde 1: Du sagst 'Drehe dich nach rechts!'. Dein Freund meint, das war links. Welche Regel ist gebrochen?", options: [
+                    { q: "Du sagst 'Drehe dich nach rechts!'. Dein Freund meint, das war links. Welche Regel ist gebrochen?", options: [
                         { text: "Eindeutigkeit (Aus welcher Sicht rechts?)", correct: true },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Reihenfolge", correct: false },
                         { text: "Endlichkeit", correct: false }
                     ]},
-                    { q: "Runde 2: 'Fahre ein bisschen schneller.' Welche Regel?", options: [
+                    { q: "'Fahre ein bisschen schneller.' Welche Regel?", options: [
                         { text: "Eindeutigkeit (Was heißt 'ein bisschen'?)", correct: true },
                         { text: "Endlichkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Reihenfolge", correct: false }
                     ]},
-                    { q: "Runde 3: 'Mache das Licht an, wenn es dunkel wird.'", options: [
+                    { q: "'Mache das Licht an, wenn es dunkel wird.'", options: [
                         { text: "Eindeutigkeit (Ab wann ist es 'dunkel'?)", correct: true },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false },
@@ -570,10 +608,10 @@
                 title="Der Wischroboter" icon="fa-broom" color="teal"
                 text="Du hast einen kleinen runden Staubsauger-Roboter, der auf dem Boden herumfährt. Welcher Befehl bricht für ihn die Regel der Ausführbarkeit?"
                 options={[
-                    { text: "A) 'Fliege zum Mond.'", correct: true },
-                    { text: "B) 'Wisch den Boden.'", correct: false, msg: "Das kann ein Wischroboter!" },
-                    { text: "C) 'Fahre nach links.'", correct: false, msg: "Das ist eine normale Roboter-Aktion." },
-                    { text: "D) 'Lade deinen Akku auf.'", correct: false, msg: "Das gehört zu seinen Standardfunktionen." }
+                    { text: "'Fliege zum Mond.'", correct: true },
+                    { text: "'Wisch den Boden.'", correct: false, msg: "Das kann ein Wischroboter!" },
+                    { text: "'Fahre nach links.'", correct: false, msg: "Das ist eine normale Roboter-Aktion." },
+                    { text: "'Lade deinen Akku auf.'", correct: false, msg: "Das gehört zu seinen Standardfunktionen." }
                 ]}
                 onComplete={onComplete}
             />
@@ -582,19 +620,19 @@
             <MCBossGauntlet
                 title="Boss: Der Unmögliche Code" icon="fa-dog" colorClass="bg-cyan-100 border-cyan-300 text-cyan-900" textClass="text-cyan-500"
                 questions={[
-                    { q: "Runde 1: Befehl an einen Hund: 'Lies das Mathe-Buch'. Welche Regel wird gebrochen?", options: [
+                    { q: "Befehl an einen Hund: 'Lies das Mathe-Buch'. Welche Regel wird gebrochen?", options: [
                         { text: "Ausführbarkeit (Hunde können nicht lesen)", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Endlichkeit", correct: false },
                         { text: "Reihenfolge", correct: false }
                     ]},
-                    { q: "Runde 2: Befehl an einen Taschenrechner: 'Mache mir ein Spiegelei'. Welche Regel bricht das?", options: [
+                    { q: "Befehl an einen Taschenrechner: 'Mache mir ein Spiegelei'. Welche Regel bricht das?", options: [
                         { text: "Ausführbarkeit (Ein Taschenrechner kann nicht kochen)", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Reihenfolge", correct: false },
                         { text: "Endlichkeit", correct: false }
                     ]},
-                    { q: "Runde 3: Befehl an ein Auto: 'Schwimme durch den Ozean'. Welche Regel?", options: [
+                    { q: "Befehl an ein Auto: 'Schwimme durch den Ozean'. Welche Regel?", options: [
                         { text: "Ausführbarkeit (Ein normales Auto sinkt)", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Endlichkeit", correct: false },
@@ -621,10 +659,10 @@
                 title="Der Zahnputz-Bug" icon="fa-tooth" color="teal"
                 text="Bringe diesen Algorithmus in eine korrekte Reihenfolge: 1) Zahnbürste in die Hand. 2) Putzen. 3) Zahnpasta drauf."
                 options={[
-                    { text: "A) 1 -> 3 -> 2", correct: true },
-                    { text: "B) 1 -> 2 -> 3", correct: false, msg: "Falsch! Erst die Zahnpasta drauf, dann putzen." },
-                    { text: "C) 3 -> 2 -> 1", correct: false, msg: "Du kannst nicht putzen, bevor du die Bürste hast." },
-                    { text: "D) 2 -> 3 -> 1", correct: false, msg: "Die Bürste muss zuerst in die Hand!" }
+                    { text: "1 -> 3 -> 2", correct: true },
+                    { text: "1 -> 2 -> 3", correct: false, msg: "Falsch! Erst die Zahnpasta drauf, dann putzen." },
+                    { text: "3 -> 2 -> 1", correct: false, msg: "Du kannst nicht putzen, bevor du die Bürste hast." },
+                    { text: "2 -> 3 -> 1", correct: false, msg: "Die Bürste muss zuerst in die Hand!" }
                 ]}
                 onComplete={onComplete}
             />
@@ -633,19 +671,19 @@
             <MCBossGauntlet
                 title="Boss: Der Wasser-Roboter" icon="fa-glass-water" colorClass="bg-sky-100 border-sky-300 text-sky-900" textClass="text-sky-500"
                 questions={[
-                    { q: "Runde 1: '1. Gieße Wasser ins Glas. 2. Nimm Glas aus dem Schrank.' Welche Regel wurde gebrochen?", options: [
+                    { q: "'1. Gieße Wasser ins Glas. 2. Nimm Glas aus dem Schrank.' Welche Regel wurde gebrochen?", options: [
                         { text: "Reihenfolge (Wasser gießen, bevor das Glas da ist)", correct: true },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false },
                         { text: "Eindeutigkeit", correct: false }
                     ]},
-                    { q: "Runde 2: '1. Gehe in den Regen. 2. Spanne Schirm auf.'", options: [
+                    { q: "'1. Gehe in den Regen. 2. Spanne Schirm auf.'", options: [
                         { text: "Reihenfolge (Du wirst nass, bevor der Schirm auf ist!)", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false }
                     ]},
-                    { q: "Runde 3: '1. Schlucken. 2. Kauen. 3. Essen in Mund stecken.'", options: [
+                    { q: "'1. Schlucken. 2. Kauen. 3. Essen in Mund stecken.'", options: [
                         { text: "Reihenfolge (Rückwärts!)", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Endlichkeit", correct: false },
@@ -672,10 +710,10 @@
                 title="Die Endlosschleife" icon="fa-rotate" color="orange"
                 text="Welches Beispiel vergleicht einen Verstoß gegen die 'Endlichkeits-Regel' (eine Endlosschleife) am besten?"
                 options={[
-                    { text: "A) Ich esse 1 Stück Torte, dann noch eins... für den Rest meines Lebens.", correct: true },
-                    { text: "B) Ich esse 1 Stück Torte und lege den Löffel weg.", correct: false, msg: "Falsch! Das ist endlich. Es hat ein klares Ende." },
-                    { text: "C) Ich trinke ein ganzes Glas Wasser auf einmal aus.", correct: false, msg: "Das hat ein klares Ende, sobald das Glas leer ist." },
-                    { text: "D) Ich laufe 100 Meter und bleibe dann stehen.", correct: false, msg: "Auch hier gibt es ein klares Ende (bei 100 Metern)." }
+                    { text: "Ich esse 1 Stück Torte, dann noch eins... für den Rest meines Lebens.", correct: true },
+                    { text: "Ich esse 1 Stück Torte und lege den Löffel weg.", correct: false, msg: "Falsch! Das ist endlich. Es hat ein klares Ende." },
+                    { text: "Ich trinke ein ganzes Glas Wasser auf einmal aus.", correct: false, msg: "Das hat ein klares Ende, sobald das Glas leer ist." },
+                    { text: "Ich laufe 100 Meter und bleibe dann stehen.", correct: false, msg: "Auch hier gibt es ein klares Ende (bei 100 Metern)." }
                 ]}
                 onComplete={onComplete}
             />
@@ -684,19 +722,19 @@
             <MCBossGauntlet
                 title="Boss: Der Unendliche Code" icon="fa-infinity" colorClass="bg-red-100 border-red-300 text-red-900" textClass="text-red-500"
                 questions={[
-                    { q: "Runde 1: Jemand programmiert den Roboter: '1. Schreibe die Zahl 1. 2. Schreibe alle folgenden Zahlen auf. Hör niemals damit auf.' Welche Regel bricht das?", options: [
+                    { q: "Jemand programmiert den Roboter: '1. Schreibe die Zahl 1. 2. Schreibe alle folgenden Zahlen auf. Hör niemals damit auf.' Welche Regel bricht das?", options: [
                         { text: "Endlichkeit (Es gibt unendlich viele Zahlen, er wird niemals fertig!)", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false }
                     ]},
-                    { q: "Runde 2: Ein Code besagt: 'Gieße immer weiter Wasser ins Glas.' Welche Regel bricht das?", options: [
+                    { q: "Ein Code besagt: 'Gieße immer weiter Wasser ins Glas.' Welche Regel bricht das?", options: [
                         { text: "Endlichkeit (Das Glas läuft ewig über)", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Eindeutigkeit", correct: false }
                     ]},
-                    { q: "Runde 3: 'Laufe geradeaus, bis du das Ende des Universums erreichst'. Welche Regel bricht das am ehesten?", options: [
+                    { q: "'Laufe geradeaus, bis du das Ende des Universums erreichst'. Welche Regel bricht das am ehesten?", options: [
                         { text: "Endlichkeit (Das Universum hat kein erreichbares Ende)", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Eindeutigkeit", correct: false },
@@ -729,10 +767,10 @@
                 title="Regel-Mixer" icon="fa-blender" color="blue"
                 text="Befehl an den Computer: 'Fühle Mitleid mit der kaputten Maus.' Welcher Regel-Verstoß liegt hier vor?"
                 options={[
-                    { text: "A) Ausführbarkeit. Computer haben keine Gefühle.", correct: true },
-                    { text: "B) Endlichkeit. Er würde ewig fühlen.", correct: false, msg: "Falsch! Er kann es ja nicht einmal anfangen." },
-                    { text: "C) Reihenfolge. Das Mitleid kommt zu spät.", correct: false, msg: "Hier gibt es keine Reihenfolge, nur einen Satz." },
-                    { text: "D) Eindeutigkeit. Mitleid ist sehr eindeutig.", correct: false, msg: "Daran scheitert es nicht primär." }
+                    { text: "Ausführbarkeit. Computer haben keine Gefühle.", correct: true },
+                    { text: "Endlichkeit. Er würde ewig fühlen.", correct: false, msg: "Falsch! Er kann es ja nicht einmal anfangen." },
+                    { text: "Reihenfolge. Das Mitleid kommt zu spät.", correct: false, msg: "Hier gibt es keine Reihenfolge, nur einen Satz." },
+                    { text: "Eindeutigkeit. Mitleid ist sehr eindeutig.", correct: false, msg: "Daran scheitert es nicht primär." }
                 ]}
                 onComplete={onComplete}
             />
@@ -741,19 +779,19 @@
             <MCBossGauntlet
                 title="Boss: Die Große Klausur" icon="fa-graduation-cap" colorClass="bg-purple-100 border-purple-300 text-purple-900" textClass="text-purple-600"
                 questions={[
-                    { q: "Frage 1: Was ist die Definition eines Algorithmus?", options: [
+                    { q: "Was ist die Definition eines Algorithmus?", options: [
                         { text: "Eine genaue Abfolge von Anweisungen zur Lösung eines Problems.", correct: true },
                         { text: "Ein Fehler im Programmcode.", correct: false },
                         { text: "Ein Bauteil, das den Computer kühlt.", correct: false },
                         { text: "Eine Computersprache wie Englisch.", correct: false }
                     ]},
-                    { q: "Frage 2: Welche der folgenden Antworten ist KEINE der 4 goldenen Regeln?", options: [
+                    { q: "Welche der folgenden Antworten ist KEINE der 4 goldenen Regeln?", options: [
                         { text: "Er muss auf Englisch geschrieben sein.", correct: true },
                         { text: "Er muss eindeutig sein.", correct: false },
                         { text: "Er muss endlich sein.", correct: false },
                         { text: "Er muss ausführbar sein.", correct: false }
                     ]},
-                    { q: "Frage 3: Ein Roboter soll fliegen, hat aber keine Flügel. Welche Regel bricht dieser Algorithmus?", options: [
+                    { q: "Ein Roboter soll fliegen, hat aber keine Flügel. Welche Regel bricht dieser Algorithmus?", options: [
                         { text: "Ausführbarkeit", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Endlichkeit", correct: false },
