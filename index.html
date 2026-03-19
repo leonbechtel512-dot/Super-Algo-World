@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Algo World 3D - Darstellung Edition</title>
+    <title>Super Algo World 3D - Unterrichts Edition</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -117,10 +117,8 @@
             </div>
         );
 
-        // --- NEUE HILFS-KOMPONENTEN FÜR LEVEL UND BOSSE ---
-
         const ReadTimerButton = ({ onClick, color, children }) => {
-            const [timeLeft, setTimeLeft] = useState(20); // Fest auf 20 Sekunden eingestellt
+            const [timeLeft, setTimeLeft] = useState(20); 
             
             useEffect(() => {
                 if (timeLeft > 0) {
@@ -299,15 +297,14 @@
             );
         };
 
-        // --- DRAG & DROP BOSS KOMPONENTE (NEU!) ---
         const DnDBossGauntlet = ({ title, icon, colorClass, textClass, tasks, onComplete }) => {
             const [stage, setStage] = useState(0);
             const [lives, setLives] = useState(3);
-            const [slots, setSlots] = useState({}); // Map of slotIndex -> blockId
+            const [slots, setSlots] = useState({});
             const [selectedId, setSelectedId] = useState(null);
             const [msg, setMsg] = useState('');
             const [shake, setShake] = useState(false);
-            const [status, setStatus] = useState('playing'); // playing, won, gameover
+            const [status, setStatus] = useState('playing');
 
             const task = tasks[stage];
 
@@ -352,7 +349,7 @@
                     if (lives > 1) {
                         setLives(l => l - 1);
                         setMsg('Du verlierst ein Leben!');
-                        setSlots({}); // Hier werden die gesetzten Bausteine resettet
+                        setSlots({});
                         setSelectedId(null);
                     } else {
                         setStatus('gameover');
@@ -370,7 +367,7 @@
                     <div className="text-center animate-pop-in mt-6">
                         <i className={`fa-solid fa-trophy text-7xl ${textClass} mb-4 animate-bounce`}></i>
                         <h2 className="text-3xl font-black mb-4">Meisterprüfung bestanden!</h2>
-                        <p className="text-gray-600 font-bold mb-6">Du hast alle 8 Diagramme perfekt zusammengebaut!</p>
+                        <p className="text-gray-600 font-bold mb-6">Du hast alle Diagramme perfekt zusammengebaut!</p>
                         <Button3D color="purple" onClick={onComplete}>Weiter 🚀</Button3D>
                     </div>
                 );
@@ -387,7 +384,6 @@
                 );
             }
 
-            // Rendert einen einzelnen Slot
             const Slot = ({ idx, shape }) => {
                 const blockId = slots[idx];
                 const block = task.blocks.find(b => b.id === blockId);
@@ -403,7 +399,7 @@
                 if (shape === 'oval') baseClasses += "rounded-full w-[160px] mx-auto";
                 else if (shape === 'rect') baseClasses += "rounded-xl w-[200px] mx-auto";
                 else if (shape === 'diamond') baseClasses += "[clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)] bg-orange-50 border-orange-400 w-[200px] h-[100px] mx-auto " + (block ? "bg-orange-200 border-solid" : "");
-                else baseClasses += "rounded-md w-full h-full"; // Default for structograms
+                else baseClasses += "rounded-md w-full h-full";
 
                 return (
                     <div onClick={() => handleSlotClick(idx)} className={baseClasses}>
@@ -428,7 +424,6 @@
                         Wähle einen Block unten aus und tippe dann auf ein leeres Feld im Diagramm!
                     </p>
 
-                    {/* BLÖCKE ZUM AUSWÄHLEN */}
                     <div className="flex flex-wrap gap-2 justify-center mb-6 min-h-[80px] p-4 bg-gray-200 rounded-xl border-4 border-gray-300 shadow-inner">
                         {task.blocks.map(b => {
                             const isPlaced = Object.values(slots).includes(b.id);
@@ -448,24 +443,20 @@
                         {Object.values(slots).length === task.solution.length && <span className="text-green-600 font-bold text-lg flex items-center w-full justify-center"><i className="fa-solid fa-check-circle mr-2"></i> Alle verbaut!</span>}
                     </div>
 
-                    {/* DIAGRAMM ZEICHNEN */}
                     <div className="mb-6 flex justify-center bg-white p-6 rounded-2xl border-4 border-gray-200 shadow-sm min-h-[300px] items-center">
                         
-                        {/* FLUSSDIAGRAMM 3 */}
                         {task.layout === 'flow-3' && (
                             <div className="flex flex-col items-center">
                                 <Slot idx={0} shape="oval" /> <Arrow /> <Slot idx={1} shape="rect" /> <Arrow /> <Slot idx={2} shape="oval" />
                             </div>
                         )}
 
-                        {/* FLUSSDIAGRAMM 4 */}
                         {task.layout === 'flow-4' && (
                             <div className="flex flex-col items-center">
                                 <Slot idx={0} shape="oval" /> <Arrow /> <Slot idx={1} shape="rect" /> <Arrow /> <Slot idx={2} shape="rect" /> <Arrow /> <Slot idx={3} shape="oval" />
                             </div>
                         )}
 
-                        {/* FLUSSDIAGRAMM BRANCH */}
                         {task.layout === 'flow-branch' && (
                             <div className="flex flex-col items-center w-full max-w-md">
                                 <Slot idx={0} shape="diamond" />
@@ -480,7 +471,6 @@
                             </div>
                         )}
 
-                        {/* STRUKTOGRAMM 2 */}
                         {task.layout === 'struct-2' && (
                             <div className="flex flex-col w-[250px] border-4 border-black bg-gray-50">
                                 <div className="border-b-4 border-black h-[60px]"><Slot idx={0} shape="none" /></div>
@@ -488,7 +478,6 @@
                             </div>
                         )}
 
-                        {/* STRUKTOGRAMM 3 */}
                         {task.layout === 'struct-3' && (
                             <div className="flex flex-col w-[250px] border-4 border-black bg-gray-50">
                                 <div className="border-b-4 border-black h-[60px]"><Slot idx={0} shape="none" /></div>
@@ -497,7 +486,6 @@
                             </div>
                         )}
 
-                        {/* STRUKTOGRAMM IF */}
                         {task.layout === 'struct-if' && (
                             <div className="flex flex-col w-full max-w-md border-4 border-black bg-gray-50">
                                 <div className="relative border-b-4 border-black h-[80px] flex items-center justify-center bg-gray-200">
@@ -513,12 +501,11 @@
                             </div>
                         )}
 
-                        {/* STRUKTOGRAMM LOOP */}
                         {task.layout === 'struct-loop' && (
                             <div className="flex flex-col w-[300px] border-4 border-black bg-gray-50">
-                                <div className="border-b-4 border-black h-[60px] bg-yellow-100 p-1 pl-8 relative">
-                                    <span className="absolute left-2 top-4 font-black text-yellow-600"><i className="fa-solid fa-rotate-right"></i></span>
-                                    <Slot idx={0} shape="none" />
+                                <div className="border-b-4 border-black h-[60px] bg-yellow-100 p-1 pl-8 relative flex items-center">
+                                    <span className="absolute left-2 font-black text-yellow-600"><i className="fa-solid fa-rotate-right"></i></span>
+                                    <div className="w-full h-full p-1"><Slot idx={0} shape="none" /></div>
                                 </div>
                                 <div className="flex h-[70px]">
                                     <div className="w-8 border-r-4 border-black bg-yellow-100"></div>
@@ -534,6 +521,157 @@
                     </Button3D>
                     
                     {msg && <p className={`font-black text-xl mt-4 ${msg==='Richtig!' ? 'text-green-500' : 'text-red-500'}`}>{msg}</p>}
+                </div>
+            );
+        };
+
+        // UNIFIED ROBOTER SEQUENCE GAME COMPONENT
+        const RoboSequenceGame = ({ title, desc, stages, maxCmds = 8, isBoss = false, onComplete }) => {
+            const [stage, setStage] = useState(0);
+            const [lives, setLives] = useState(3);
+            const [seq, setSeq] = useState([]);
+            const [status, setStatus] = useState('idle');
+            const [msg, setMsg] = useState('');
+            const [shake, setShake] = useState(false);
+
+            const current = stages[stage];
+            const [pos, setPos] = useState(current.start);
+            const size = current.size;
+
+            const run = async () => {
+                setStatus('running'); setMsg('');
+                let cx = current.start.x, cy = current.start.y;
+                setPos({x: cx, y: cy});
+                await sleep(400);
+
+                for (let cmd of seq) {
+                    if (cmd === 'U') cy -= 1; if (cmd === 'D') cy += 1; if (cmd === 'L') cx -= 1; if (cmd === 'R') cx += 1;
+                    setPos({x: cx, y: cy});
+                    await sleep(400);
+                    if (cx < 0 || cx >= size || cy < 0 || cy >= size) {
+                        handleFail('Crash! Rand berührt!'); return;
+                    }
+                    if (current.walls && current.walls.some(w => w.x === cx && w.y === cy)) {
+                        handleFail('Crash! Wand/Hindernis berührt!'); return;
+                    }
+                }
+
+                if (cx === current.target.x && cy === current.target.y) {
+                    setMsg('Ziel erreicht!');
+                    setStatus('win');
+                    await sleep(1000);
+                    if (stage < stages.length - 1) {
+                        setStage(s => s + 1);
+                        setPos(stages[stage+1].start);
+                        setSeq([]);
+                        setStatus('idle');
+                        setMsg('');
+                    } else {
+                        setStatus('game_won');
+                    }
+                } else {
+                    handleFail('Ziel verfehlt!');
+                }
+            };
+
+            const handleFail = (message) => {
+                setShake(true); setTimeout(() => setShake(false), 300);
+                if (isBoss) {
+                    if (lives > 1) {
+                        setLives(l => l - 1);
+                        setMsg(message + ' Du verlierst ein Leben!');
+                        setStatus('fail');
+                    } else {
+                        setLives(0);
+                        setStatus('gameover');
+                    }
+                } else {
+                    setMsg(message);
+                    setStatus('fail');
+                }
+            };
+
+            const reset = () => { setPos(current.start); setStatus('idle'); setMsg(''); setSeq([]); };
+            const fullRestart = () => { setLives(3); setStage(0); setPos(stages[0].start); setStatus('idle'); setSeq([]); };
+
+            const addCmd = (c) => { if(status === 'idle' && seq.length < maxCmds) setSeq([...seq, c]); };
+            const delCmd = () => { if(status === 'idle' && seq.length > 0) setSeq(seq.slice(0,-1)); };
+
+            if (status === 'gameover') {
+                return (
+                    <div className="text-center animate-pop-in bg-red-100 p-8 rounded-3xl border-4 border-red-500">
+                        <i className="fa-solid fa-skull-crossbones text-7xl text-red-500 mb-4 animate-float"></i>
+                        <h2 className="text-3xl font-black mb-4 text-red-700">GAME OVER</h2>
+                        <p className="text-red-900 font-bold mb-6">Du hast alle 3 Leben verloren. Der Boss hat dich besiegt!</p>
+                        <Button3D color="red" onClick={fullRestart}>Erneut Versuchen</Button3D>
+                    </div>
+                );
+            }
+
+            if (status === 'game_won') {
+                return (
+                    <div className="animate-pop-in text-center mt-4">
+                        <i className="fa-solid fa-trophy text-7xl text-yellow-500 mb-4 animate-bounce"></i>
+                        <p className="text-green-600 font-black text-3xl mb-2">Perfekt navigiert!</p>
+                        <p className="text-gray-600 font-bold mb-6">{isBoss ? "Boss besiegt!" : "Level geschafft!"}</p>
+                        <Button3D color="purple" onClick={onComplete}>Weiter 🚀</Button3D>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={`text-center animate-pop-in ${shake ? 'animate-shake' : ''}`}>
+                    {isBoss && (
+                        <div className="flex justify-between items-center mb-2 px-4">
+                            <div className="flex gap-1">{[1, 2, 3].map(i => <i key={i} className={`fa-solid fa-heart text-2xl ${i <= lives ? 'text-red-500 animate-pulse' : 'text-gray-300'}`}></i>)}</div>
+                            <div className="font-black text-gray-500 bg-gray-200 px-3 py-1 rounded-full text-sm">Runde {stage + 1} / {stages.length}</div>
+                        </div>
+                    )}
+
+                    <h2 className="text-3xl font-black mb-2 text-gray-800">{title}</h2>
+                    <p className="bg-gray-100 p-3 rounded-2xl border-4 border-gray-300 font-bold mb-4 text-xs md:text-sm text-left text-gray-700">
+                        {desc} <br/> <span className="text-gray-500">(Max. {maxCmds} Befehle)</span>
+                    </p>
+
+                    <div className="relative mx-auto mb-4 bg-gray-800 border-4 border-gray-900 rounded-xl shadow-inner overflow-hidden" style={{ width: '100%', maxWidth: '280px', aspectRatio: '1/1' }}>
+                        <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${size}, 1fr)`, gridTemplateRows: `repeat(${size}, 1fr)` }}>
+                            {Array.from({length: size * size}).map((_, i) => {
+                                const x = i % size;
+                                const y = Math.floor(i / size);
+                                const isWall = current.walls && current.walls.some(w => w.x === x && w.y === y);
+                                return <div key={i} className={`border-2 border-gray-500 ${isWall ? 'bg-orange-800' : 'bg-gray-700/30'}`}></div>;
+                            })}
+                        </div>
+                        {current.walls && current.walls.map((w, i) => (
+                            <div key={i} className="absolute flex items-center justify-center" style={{ left: `${(w.x / size) * 100}%`, top: `${(w.y / size) * 100}%`, width: `${100/size}%`, height: `${100/size}%` }}>
+                                <i className="fa-solid fa-brick text-orange-900 opacity-50"></i>
+                            </div>
+                        ))}
+                        <div className="absolute flex items-center justify-center bg-green-500 border-2 border-green-700" style={{ left: `${(current.target.x / size) * 100}%`, top: `${(current.target.y / size) * 100}%`, width: `${100/size}%`, height: `${100/size}%` }}><i className="fa-solid fa-door-open text-white text-xl"></i></div>
+                        <div className="absolute flex items-center justify-center transition-all duration-400 ease-in-out z-10" style={{ left: `${(pos.x / size) * 100}%`, top: `${(pos.y / size) * 100}%`, width: `${100/size}%`, height: `${100/size}%` }}><i className={`fa-solid ${status === 'fail' ? 'fa-explosion text-red-500 scale-125' : 'fa-robot text-cyan-400'} text-2xl drop-shadow-md`}></i></div>
+                    </div>
+
+                    <div className="bg-white border-2 border-gray-300 rounded-xl p-2 mb-4 min-h-[50px] flex items-center justify-start gap-1 flex-wrap shadow-inner text-xl">
+                        {seq.length === 0 && <span className="text-gray-400 text-sm font-bold ml-2">Code leer...</span>}
+                        {seq.map((c, i) => <span key={i}>{c==='U'?'⬆️':c==='D'?'⬇️':c==='L'?'⬅️':'➡️'}</span>)}
+                    </div>
+
+                    {status === 'idle' && (
+                        <div className="space-y-2">
+                            <div className="flex justify-center gap-2">
+                                <button onClick={()=>addCmd('U')} className="bg-gray-100 border-2 border-gray-300 p-2 rounded-xl shadow-sm hover:bg-gray-200 flex flex-col items-center justify-center w-16"><span className="text-xl">⬆️</span><span className="text-[10px] font-bold mt-1 uppercase text-gray-600">Hoch</span></button>
+                                <button onClick={()=>addCmd('D')} className="bg-gray-100 border-2 border-gray-300 p-2 rounded-xl shadow-sm hover:bg-gray-200 flex flex-col items-center justify-center w-16"><span className="text-xl">⬇️</span><span className="text-[10px] font-bold mt-1 uppercase text-gray-600">Runter</span></button>
+                                <button onClick={()=>addCmd('L')} className="bg-gray-100 border-2 border-gray-300 p-2 rounded-xl shadow-sm hover:bg-gray-200 flex flex-col items-center justify-center w-16"><span className="text-xl">⬅️</span><span className="text-[10px] font-bold mt-1 uppercase text-gray-600">Links</span></button>
+                                <button onClick={()=>addCmd('R')} className="bg-gray-100 border-2 border-gray-300 p-2 rounded-xl shadow-sm hover:bg-gray-200 flex flex-col items-center justify-center w-16"><span className="text-xl">➡️</span><span className="text-[10px] font-bold mt-1 uppercase text-gray-600">Rechts</span></button>
+                                <button onClick={delCmd} className="bg-red-100 border-2 border-red-300 p-2 rounded-xl shadow-sm hover:bg-red-200 flex flex-col items-center justify-center w-16 text-red-600"><i className="fa-solid fa-delete-left text-xl"></i><span className="text-[10px] font-bold mt-1 uppercase">Lösch</span></button>
+                            </div>
+                            <Button3D color="blue" onClick={run} disabled={seq.length===0} className="py-2">AUSFÜHREN</Button3D>
+                        </div>
+                    )}
+
+                    {status === 'running' && <p className="text-blue-600 font-black animate-pulse">Roboter fährt...</p>}
+                    {status === 'fail' && <div className="animate-pop-in"><p className="text-red-500 font-bold mb-2">{msg}</p><Button3D color="red" className="py-2" onClick={reset}>Neustart</Button3D></div>}
+                    {status === 'win' && <p className="text-green-600 font-black text-xl animate-bounce">{msg}</p>}
                 </div>
             );
         };
@@ -597,7 +735,7 @@
             <div className="animate-pop-in">
                 <DialogBox title="Roboter steuern" icon="fa-robot" color="orange">
                     <p><b>Algo erklärt:</b> "Computer und Roboter denken nicht selbst. Sie tun nur exakt das, was man ihnen als Anweisung gibt!"</p>
-                    <p>Du lernst jetzt, wie man einen kleinen Roboter namens <b>Robbie</b> steuert. Er kennt nur ganz einfache Befehle wie "Gehe vorwärts" oder "Drehe rechts".</p>
+                    <p>Du lernst jetzt, wie man einen kleinen Roboter namens <b>Robbie</b> steuert. Er kennt nur ganz einfache Befehle wie "Gehe vorwärts", "rückwärts", "links" oder "rechts".</p>
                 </DialogBox>
                 <ReadTimerButton color="orange" onClick={onComplete}>Ich übernehme die Steuerung!</ReadTimerButton>
             </div>
@@ -607,7 +745,7 @@
                 title="Code im Kopf lesen" icon="fa-brain" color="blue"
                 text={
                     <div>
-                        <p className="mb-4 font-bold text-gray-700">Algo sagt: Robbie schaut nach oben auf seinem Startfeld (unten links). Was passiert, wenn er diesen Code abarbeitet?</p>
+                        <p className="mb-4 font-bold text-gray-700">Algo sagt: Robbie steht auf seinem Startfeld (unten links). Was passiert, wenn er diesen Code abarbeitet?</p>
                         <div className="flex flex-col sm:flex-row gap-6 items-center justify-center bg-blue-50 p-4 rounded-2xl border-2 border-blue-200 shadow-inner">
                             <div className="relative bg-gray-800 border-4 border-gray-900 rounded-xl shadow-md box-content flex-shrink-0" style={{ width: '150px', height: '150px' }}>
                                 <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
@@ -622,10 +760,8 @@
                             </div>
                             <div className="font-mono bg-white p-4 rounded-xl border-2 border-gray-300 text-sm md:text-base text-gray-800 shadow-sm w-full text-left leading-relaxed">
                                 1. Gehe 1 Feld vorwärts.<br/>
-                                2. Drehe 90 Grad rechts.<br/>
-                                3. Gehe 1 Feld vorwärts.<br/>
-                                4. Drehe 90 Grad rechts.<br/>
-                                5. Gehe 1 Feld vorwärts.
+                                2. Gehe 1 Feld nach rechts.<br/>
+                                3. Gehe 1 Feld rückwärts.
                             </div>
                         </div>
                     </div>
@@ -634,156 +770,65 @@
                     { text: "Er steht genau rechts neben seinem Startpunkt.", correct: true },
                     { text: "Er steht wieder exakt auf seinem Startpunkt.", correct: false, msg: "Zeichne den Weg mal mit dem Finger auf den Tisch!" },
                     { text: "Er steht zwei Felder vor seinem Startpunkt.", correct: false, msg: "Er ist zwischendurch abgebogen!" },
-                    { text: "Er steht links neben seinem Startpunkt.", correct: false, msg: "Achte auf die Rechts-Drehungen!" }
+                    { text: "Er steht links neben seinem Startpunkt.", correct: false, msg: "Achte auf die Richtung 'rechts'!" }
                 ]}
                 onComplete={onComplete}
             />
         );
-        const L2_3 = ({ onComplete }) => {
-            const [stage, setStage] = useState(0);
-            const [lives, setLives] = useState(3);
-            const [seq, setSeq] = useState([]);
-            const [status, setStatus] = useState('idle'); 
-            const [msg, setMsg] = useState('');
-            const [shake, setShake] = useState(false);
+        
+        const L2_3 = ({ onComplete }) => (
+            <RoboSequenceGame
+                title="Erste Hindernisse"
+                desc="Programmiere Robbie zum Ziel. Weiche der roten Mauer aus!"
+                isBoss={false}
+                maxCmds={8}
+                stages={[
+                    { size: 3, start: {x: 0, y: 2}, target: {x: 2, y: 0}, walls: [{x: 1, y: 1}] }
+                ]}
+                onComplete={onComplete}
+            />
+        );
 
-            const stages = [
-                { target: {x: 2, y: 0}, start: {x: 0, y: 2} },
-                { target: {x: 0, y: 0}, start: {x: 2, y: 2} },
-                { target: {x: 1, y: 1}, start: {x: 0, y: 2} }
-            ];
-            const [pos, setPos] = useState(stages[0].start);
+        const L2_4 = ({ onComplete }) => (
+            <RoboSequenceGame
+                title="Der Umweg"
+                desc="Das Ziel ist nah, aber der direkte Weg ist blockiert. Finde den Umweg im 4x4 Gitter!"
+                isBoss={false}
+                maxCmds={12}
+                stages={[
+                    { size: 4, start: {x: 0, y: 3}, target: {x: 3, y: 0}, walls: [{x: 0, y: 2}, {x: 1, y: 2}, {x: 2, y: 0}, {x: 2, y: 1}] }
+                ]}
+                onComplete={onComplete}
+            />
+        );
 
-            const run = async () => {
-                setStatus('running'); setMsg('');
-                let cx = stages[stage].start.x, cy = stages[stage].start.y;
-                setPos({x: cx, y: cy});
-                await sleep(400);
-
-                for (let cmd of seq) {
-                    if (cmd === 'U') cy -= 1; if (cmd === 'D') cy += 1; if (cmd === 'L') cx -= 1; if (cmd === 'R') cx += 1;
-                    setPos({x: cx, y: cy});
-                    await sleep(400);
-                    if (cx < 0 || cx > 2 || cy < 0 || cy > 2) { 
-                        handleFail('Crash! Wand berührt!'); return; 
-                    }
-                }
-
-                if (cx === stages[stage].target.x && cy === stages[stage].target.y) { 
-                    setMsg('Ziel erreicht!');
-                    setStatus('win');
-                    await sleep(1000);
-                    if (stage < 2) {
-                        setStage(s => s + 1);
-                        setPos(stages[stage+1].start);
-                        setSeq([]);
-                        setStatus('idle');
-                        setMsg('');
-                    } else {
-                        setStatus('game_won');
-                    }
-                } else { 
-                    handleFail('Ziel verfehlt!'); 
-                }
-            };
-
-            const handleFail = (message) => {
-                setShake(true); setTimeout(() => setShake(false), 300);
-                if (lives > 1) {
-                    setLives(l => l - 1);
-                    setMsg(message + ' Du verlierst ein Leben!');
-                    setStatus('fail');
-                } else {
-                    setLives(0);
-                    setStatus('gameover');
-                }
-            };
-
-            const reset = () => { setPos(stages[stage].start); setStatus('idle'); setMsg(''); setSeq([]); };
-            const fullRestart = () => { setLives(3); setStage(0); setPos(stages[0].start); setStatus('idle'); setSeq([]); };
-            
-            const addCmd = (c) => { if(status === 'idle' && seq.length < 8) setSeq([...seq, c]); };
-            const delCmd = () => { if(status === 'idle' && seq.length > 0) setSeq(seq.slice(0,-1)); };
-
-            if (status === 'gameover') {
-                return (
-                    <div className="text-center animate-pop-in bg-red-100 p-8 rounded-3xl border-4 border-red-500">
-                        <i className="fa-solid fa-skull-crossbones text-7xl text-red-500 mb-4 animate-float"></i>
-                        <h2 className="text-3xl font-black mb-4 text-red-700">GAME OVER</h2>
-                        <p className="text-red-900 font-bold mb-6">Du hast alle 3 Leben verloren. Der Boss hat dich besiegt!</p>
-                        <Button3D color="red" onClick={fullRestart}>Erneut Versuchen</Button3D>
-                    </div>
-                );
-            }
-
-            if (status === 'game_won') {
-                return (
-                    <div className="animate-pop-in text-center mt-4">
-                        <i className="fa-solid fa-trophy text-7xl text-yellow-500 mb-4 animate-bounce"></i>
-                        <p className="text-green-600 font-black text-3xl mb-2">Perfekt navigiert!</p>
-                        <p className="text-gray-600 font-bold mb-6">Boss in allen 3 Runden besiegt!</p>
-                        <Button3D color="purple" onClick={onComplete}>Weiter 🚀</Button3D>
-                    </div>
-                );
-            }
-
-            return (
-                <div className={`text-center animate-pop-in ${shake ? 'animate-shake' : ''}`}>
-                    <div className="flex justify-between items-center mb-2 px-4">
-                        <div className="flex gap-1">{[1, 2, 3].map(i => <i key={i} className={`fa-solid fa-heart text-2xl ${i <= lives ? 'text-red-500 animate-pulse' : 'text-gray-300'}`}></i>)}</div>
-                        <div className="font-black text-gray-500 bg-gray-200 px-3 py-1 rounded-full text-sm">Runde {stage + 1} / 3</div>
-                    </div>
-
-                    <h2 className="text-3xl font-black mb-2 text-gray-800">Boss: Roboter Robbie</h2>
-                    <p className="bg-gray-100 p-3 rounded-2xl border-4 border-gray-300 font-bold mb-4 text-xs md:text-sm text-left text-gray-700">
-                        Baue einen Algorithmus! Führe den Roboter zur grünen Tür.
-                    </p>
-                    
-                    <div className="relative mx-auto mb-4 bg-gray-800 border-4 border-gray-900 rounded-xl shadow-inner box-content overflow-hidden" style={{ width: '150px', height: '150px' }}>
-                        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
-                            {[0,1,2,3,4,5,6,7,8].map(i => <div key={i} className="border-2 border-gray-500 bg-gray-700/30"></div>)}
-                        </div>
-                        <div className="absolute flex items-center justify-center bg-green-500 border-2 border-green-700" style={{ left: `${stages[stage].target.x * 50}px`, top: `${stages[stage].target.y * 50}px`, width: '50px', height: '50px' }}><i className="fa-solid fa-door-open text-white text-2xl"></i></div>
-                        <div className="absolute flex items-center justify-center transition-all duration-400 ease-in-out z-10" style={{ left: `${pos.x * 50}px`, top: `${pos.y * 50}px`, width: '50px', height: '50px' }}><i className={`fa-solid ${status === 'fail' ? 'fa-explosion text-red-500 scale-125' : 'fa-robot text-cyan-400'} text-3xl drop-shadow-md`}></i></div>
-                    </div>
-
-                    <div className="bg-white border-2 border-gray-300 rounded-xl p-2 mb-4 min-h-[50px] flex items-center justify-start gap-1 flex-wrap shadow-inner text-xl">
-                        {seq.length === 0 && <span className="text-gray-400 text-sm font-bold ml-2">Code leer...</span>}
-                        {seq.map((c, i) => <span key={i}>{c==='U'?'⬆️':c==='D'?'⬇️':c==='L'?'⬅️':'➡️'}</span>)}
-                    </div>
-
-                    {status === 'idle' && (
-                        <div className="space-y-2">
-                            <div className="flex justify-center gap-2">
-                                <button onClick={()=>addCmd('U')} className="bg-gray-100 border-2 border-gray-300 p-2 rounded-xl shadow-sm hover:bg-gray-200 flex flex-col items-center justify-center w-16"><span className="text-xl">⬆️</span><span className="text-[10px] font-bold mt-1 uppercase text-gray-600">Hoch</span></button>
-                                <button onClick={()=>addCmd('D')} className="bg-gray-100 border-2 border-gray-300 p-2 rounded-xl shadow-sm hover:bg-gray-200 flex flex-col items-center justify-center w-16"><span className="text-xl">⬇️</span><span className="text-[10px] font-bold mt-1 uppercase text-gray-600">Runter</span></button>
-                                <button onClick={()=>addCmd('L')} className="bg-gray-100 border-2 border-gray-300 p-2 rounded-xl shadow-sm hover:bg-gray-200 flex flex-col items-center justify-center w-16"><span className="text-xl">⬅️</span><span className="text-[10px] font-bold mt-1 uppercase text-gray-600">Links</span></button>
-                                <button onClick={()=>addCmd('R')} className="bg-gray-100 border-2 border-gray-300 p-2 rounded-xl shadow-sm hover:bg-gray-200 flex flex-col items-center justify-center w-16"><span className="text-xl">➡️</span><span className="text-[10px] font-bold mt-1 uppercase text-gray-600">Rechts</span></button>
-                                <button onClick={delCmd} className="bg-red-100 border-2 border-red-300 p-2 rounded-xl shadow-sm hover:bg-red-200 flex flex-col items-center justify-center w-16 text-red-600"><i className="fa-solid fa-delete-left text-xl"></i><span className="text-[10px] font-bold mt-1 uppercase">Lösch</span></button>
-                            </div>
-                            <Button3D color="blue" onClick={run} disabled={seq.length===0} className="py-2">AUSFÜHREN</Button3D>
-                        </div>
-                    )}
-
-                    {status === 'running' && <p className="text-blue-600 font-black animate-pulse">Roboter fährt...</p>}
-                    {status === 'fail' && <div className="animate-pop-in"><p className="text-red-500 font-bold mb-2">{msg}</p><Button3D color="red" className="py-2" onClick={reset}>Neustart</Button3D></div>}
-                    {status === 'win' && <p className="text-green-600 font-black text-xl animate-bounce">{msg}</p>}
-                </div>
-            );
-        };
+        const L2_5 = ({ onComplete }) => (
+            <RoboSequenceGame
+                title="Boss: Das Labyrinth"
+                desc="Überwinde die 3 Stufen der Labyrinthe (bis zu 5x5), um den Boss zu besiegen!"
+                isBoss={true}
+                maxCmds={20}
+                stages={[
+                    { size: 4, start: {x: 0, y: 3}, target: {x: 3, y: 0}, walls: [{x: 0, y: 2}, {x: 1, y: 2}, {x: 2, y: 0}, {x: 2, y: 1}] },
+                    { size: 5, start: {x: 0, y: 4}, target: {x: 4, y: 0}, walls: [{x: 1, y: 4}, {x: 1, y: 3}, {x: 1, y: 2}, {x: 3, y: 2}, {x: 3, y: 1}, {x: 3, y: 0}] },
+                    { size: 5, start: {x: 0, y: 4}, target: {x: 4, y: 0}, walls: [{x: 0, y: 3}, {x: 1, y: 3}, {x: 2, y: 3}, {x: 3, y: 3}, {x: 1, y: 1}, {x: 2, y: 1}, {x: 3, y: 1}, {x: 4, y: 1}] }
+                ]}
+                onComplete={onComplete}
+            />
+        );
 
         // WELT 3: DIE 4 REGELN
         const L3_1 = ({ onComplete }) => (
             <div className="animate-pop-in">
-                <DialogBox title="Die 4 goldenen Regeln" icon="fa-gavel" color="teal">
-                    <p><b>Algo mahnt:</b> Ein dummer Roboter kann nichts erfinden oder mitdenken. Damit er uns versteht, müssen Algorithmen strenge Regeln einhalten:</p>
+                <DialogBox title="4 Regeln für eine Sequenz von Anweisungen" icon="fa-gavel" color="teal">
+                    <p><b>Algo mahnt:</b> Ein dummer Roboter kann nichts erfinden oder mitdenken. Damit er einfache Abläufe (eine <strong>Sequenz von Anweisungen</strong>) fehlerfrei versteht, gelten 4 strenge Regeln:</p>
                     <ul className="list-disc list-inside space-y-2 font-bold text-teal-900 bg-white p-4 rounded-xl border border-teal-200 text-sm md:text-base shadow-inner">
                         <li><b>1. Eindeutig</b></li>
                         <li><b>2. Ausführbar</b></li>
                         <li><b>3. Reihenfolge</b></li>
                         <li><b>4. Endlich</b></li>
                     </ul>
-                    <p>Lass uns diese Regeln nun genauer anschauen!</p>
+                    <p>Lass uns diese Regeln nun genauer anschauen, bevor wir später komplexere Algorithmen bauen!</p>
                 </DialogBox>
                 <ReadTimerButton color="teal" onClick={onComplete}>Regeln verstanden!</ReadTimerButton>
             </div>
@@ -844,238 +889,223 @@
                     ]},
                     { q: "Ein Smart-Home-System bekommt den Code: 'Koche das Abendessen auf dem Herd', hat aber keine physischen Roboterarme. Regel?", options: [
                         { text: "Ausführbarkeit", correct: true }, { text: "Reihenfolge", correct: false }, { text: "Endlichkeit", correct: false }, { text: "Eindeutigkeit", correct: false }
-                    ]},
-                    { q: "'1. Sende die E-Mail ab. 2. Tippe die Nachricht.' Welcher Fehler ist das?", options: [
-                        { text: "Reihenfolge", correct: true }, { text: "Ausführbarkeit", correct: false }, { text: "Endlichkeit", correct: false }, { text: "Eindeutigkeit", correct: false }
                     ]}
                 ]}
                 onComplete={onComplete}
             />
         );
 
-        // WELT 4: FLUSSDIAGRAMME (NEU)
+        // WELT 4: SCHLEIFEN
         const L4_1 = ({ onComplete }) => (
             <div className="animate-pop-in">
-                <DialogBox title="Das Flussdiagramm" icon="fa-project-diagram" color="blue">
-                    <p>Texte sind oft schwer zu lesen. Um Algorithmen übersichtlich darzustellen, zeichnet man sie oft als <strong>Flussdiagramm</strong>!</p>
-                    
-                    <div className="flex flex-col md:flex-row gap-6 mt-4 items-center">
-                        <div className="flex-1">
-                            <p>Dabei nutzt man verschiedene geometrische Formen, die mit Pfeilen verbunden sind:</p>
-                            <ul className="list-none space-y-3 font-bold text-sm bg-white p-4 rounded-xl border border-blue-200 mt-4 shadow-sm">
-                                <li className="flex items-center gap-3"><span className="inline-block w-12 h-6 rounded-full bg-blue-100 border-2 border-blue-500"></span> = <b>Ovale</b> für Start & Ende</li>
-                                <li className="flex items-center gap-3"><span className="inline-block w-12 h-6 rounded-md bg-green-100 border-2 border-green-500"></span> = <b>Rechtecke</b> für Anweisungen</li>
-                                <li className="flex items-center gap-3"><span className="inline-block w-12 h-6 bg-orange-100 border-2 border-orange-500" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}></span> = <b>Rauten</b> für Bedingungen</li>
-                            </ul>
-                        </div>
-                        
-                        {/* Abstraktes Beispiel-Diagramm rechts */}
-                        <div className="flex flex-col items-center gap-1 bg-gray-50 p-4 rounded-xl border-4 border-gray-200 shadow-inner w-full md:w-auto">
-                            <div className="w-20 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">START</div>
-                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
-                            <div className="w-20 h-8 rounded-md bg-green-100 border-2 border-green-500 flex items-center justify-center text-[10px] font-bold text-green-900 shadow-sm">Aktion</div>
-                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
-                            <div className="w-24 h-12 bg-orange-100 border-2 border-orange-500 flex items-center justify-center text-[10px] font-bold text-orange-900 shadow-sm" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}>Frage?</div>
-                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
-                            <div className="w-20 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">ENDE</div>
-                        </div>
-                    </div>
+                <DialogBox title="Schleifen (Wiederholungen)" icon="fa-rotate-right" color="blue">
+                    <p>Stell dir vor, Robbie soll 100 Schritte gehen. 'Gehe vorwärts' 100-mal aufzuschreiben, dauert ewig und ist unübersichtlich!</p>
+                    <p>Dafür gibt es in der Informatik <strong>Schleifen</strong>. Eine Schleife wiederholt einen Block von Anweisungen automatisch so oft, wie du es willst.</p>
                 </DialogBox>
-                <ReadTimerButton color="blue" onClick={onComplete}>Pfeilen folgen, kapiert!</ReadTimerButton>
+                <ReadTimerButton color="blue" onClick={onComplete}>Das spart Zeit!</ReadTimerButton>
             </div>
         );
         const L4_2 = ({ onComplete }) => (
             <MCLevel 
-                title="Formen-Quiz" icon="fa-shapes" color="teal"
-                text="Welche geometrische Form nutzt man im Flussdiagramm, wenn man eine Frage stellt (eine Verzweigung / Bedingung) bei der es 'JA' oder 'NEIN' als Weg gibt?"
+                title="Der faule Programmierer" icon="fa-couch" color="teal"
+                text="Ein Programmierer möchte, dass sein Roboter 5 Schritte geradeaus geht. Welcher Code ist schlauer und übersichtlicher?"
                 options={[
-                    { text: "Die Raute", correct: true },
-                    { text: "Das Rechteck", correct: false, msg: "Rechtecke sind für normale Aktionen (z.B. 'Gehe vor')." },
-                    { text: "Das Oval", correct: false, msg: "Das Oval nutzt man nur ganz oben (START) und unten (ENDE)." },
-                    { text: "Das Dreieck", correct: false, msg: "Dreiecke gibt es im normalen Flussdiagramm nicht." }
+                    { text: "WIEDERHOLE 5 MAL: Gehe 1 Schritt vorwärts.", correct: true },
+                    { text: "Gehe vorwärts. Gehe vorwärts. Gehe vorwärts. Gehe vorwärts. Gehe vorwärts.", correct: false, msg: "Das funktioniert, ist aber viel zu lang und unübersichtlich!" },
+                    { text: "Gehe 5 mal.", correct: false, msg: "Das ist nicht eindeutig genug für eine Schleife." }
                 ]}
                 onComplete={onComplete}
             />
         );
         const L4_3 = ({ onComplete }) => (
             <MCBossGauntlet
-                title="Boss: Fluss-Prüfer" icon="fa-code-branch" colorClass="bg-blue-100 border-blue-300 text-blue-900" textClass="text-blue-600"
+                title="Boss: Der Loop-Meister" icon="fa-rotate" colorClass="bg-blue-100 border-blue-300 text-blue-900" textClass="text-blue-600"
                 questions={[
-                    { q: "Wenn ein Pfeil von einem Kasten zurück nach oben zu einem früheren Kasten zeigt, was bedeutet das?", options: [
-                        { text: "Es ist eine Schleife (Wiederholung).", correct: true }, { text: "Das Diagramm ist falsch herum.", correct: false }, { text: "Das Programm ist zu Ende.", correct: false }, { text: "Der Roboter läuft rückwärts.", correct: false }
+                    { q: "Wie viele Schritte geht Robbie insgesamt bei diesem Code: WIEDERHOLE 4 MAL: { Gehe 1 Schritt vor. }", options: [
+                        { text: "4 Schritte", correct: true }, { text: "1 Schritt", correct: false }, { text: "Keinen", correct: false }, { text: "Unendlich viele", correct: false }
                     ]},
-                    { q: "Ein Rechteck im Flussdiagramm hat IMMER wie viele ausgehende Pfeile (nach unten)?", options: [
-                        { text: "Genau einen (zur nächsten Aktion).", correct: true }, { text: "Zwei (für Ja und Nein).", correct: false }, { text: "Keinen.", correct: false }, { text: "Unendlich viele.", correct: false }
+                    { q: "Wohin schaut Robbie nach diesem Code: WIEDERHOLE 2 MAL: { Drehe 90° rechts. } (Er startet mit Blick nach vorne)", options: [
+                        { text: "Nach hinten", correct: true }, { text: "Nach rechts", correct: false }, { text: "Nach links", correct: false }, { text: "Nach vorne", correct: false }
                     ]},
-                    { q: "Woran erkennst du im Flussdiagramm den genauen Ablauf, wenn du es liest?", options: [
-                        { text: "Ich folge einfach den gezeichneten Pfeilen.", correct: true }, { text: "Ich lese einfach stur von oben nach unten.", correct: false }, { text: "Ich fange beim größten Kasten an.", correct: false }, { text: "Ich lese von links nach rechts.", correct: false }
+                    { q: "Was passiert hier: WIEDERHOLE FÜR IMMER: { Gehe vor. }", options: [
+                        { text: "Eine Endlosschleife! Er läuft für immer (oder bis er crasht).", correct: true }, { text: "Er geht nur einen Schritt.", correct: false }, { text: "Er dreht sich im Kreis.", correct: false }, { text: "Der Computer schaltet sich ab.", correct: false }
                     ]}
                 ]}
                 onComplete={onComplete}
             />
         );
 
-        // WELT 5: STRUKTOGRAMME (NEU)
+        // WELT 5: BEDINGUNGEN
         const L5_1 = ({ onComplete }) => (
             <div className="animate-pop-in">
-                <DialogBox title="Das Struktogramm" icon="fa-layer-group" color="purple">
-                    <p>Eine andere Art, Algorithmen zu zeichnen, ist das <strong>Struktogramm (Nassi-Shneiderman-Diagramm)</strong>.</p>
-                    <p>Hier gibt es <strong>KEINE Pfeile</strong>! Die Blöcke werden einfach ineinander oder übereinander gestapelt.</p>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                        {/* 1. Sequenz */}
-                        <div className="flex flex-col items-center">
-                            <p className="font-bold text-xs mb-2 text-purple-800 bg-purple-100 px-2 py-1 rounded-md">1. Sequenz (Ablauf)</p>
-                            <div className="flex flex-col w-full max-w-[150px] border-2 border-black text-xs font-bold text-center bg-white shadow-md">
-                                <div className="border-b-2 border-black p-1 bg-gray-100">Aufstehen</div>
-                                <div className="border-b-2 border-black p-1 bg-gray-100">Anziehen</div>
-                                <div className="p-1 bg-gray-100">Frühstücken</div>
-                            </div>
-                        </div>
+                <DialogBox title="Verzweigungen & Vollständigkeit" icon="fa-code-branch" color="blue">
+                    <p>Oft muss ein Algorithmus entscheiden, was er tut. Dafür gibt es <strong>Bedingungen (WENN - DANN)</strong>.</p>
+                    <p>Hier kommt eine extrem wichtige, neue Regel hinzu: Die <strong>Vollständigkeit</strong>!</p>
+                    <div className="bg-blue-100 p-3 rounded-lg border-2 border-blue-400 font-bold text-blue-900 text-sm">
+                        Ein Algorithmus mit Verzweigungen muss immer vollständig sein. Du musst bei einer Frage IMMER planen, was beim "JA"-Weg UND was beim "NEIN"-Weg passiert! Vergisst du einen Weg, weiß der Computer nicht weiter.
+                    </div>
+                </DialogBox>
+                <ReadTimerButton color="blue" onClick={onComplete}>Vollständig verstanden!</ReadTimerButton>
+            </div>
+        );
+        const L5_2 = ({ onComplete }) => {
+            const initialOpts = [
+                { id: 1, text: "A) Die Ausführbarkeit. Ein Schirm ist zu schwer.", correct: false, msg: "Falsch! Der Roboter kann den Schirm öffnen." },
+                { id: 2, text: "B) Die Vollständigkeit! Sie hat vergessen zu sagen, was passiert, wenn es NICHT regnet.", correct: true },
+                { id: 3, text: "C) Die Endlichkeit. Es regnet für immer.", correct: false, msg: "Falsch! Es geht hier um die fehlende Antwort auf die Bedingung." }
+            ];
+            const [opts, setOpts] = useState(() => shuffleArray(initialOpts));
+            const [errorMsg, setErrorMsg] = useState('');
 
-                        {/* 2. Bedingung */}
+            const handlePick = (opt) => {
+                if(opt.correct) { setErrorMsg(''); onComplete(); } 
+                else { setErrorMsg(opt.msg); setOpts(shuffleArray([...opts])); }
+            };
+
+            return (
+                <div className="animate-pop-in">
+                    <DialogBox title="Der vergessliche Code" icon="fa-cloud-rain" color="teal">
+                        <p>Tina schreibt einen Code für ihren Roboter: <strong>"WENN es regnet, spanne den Schirm auf."</strong></p>
+                        <p>Sie vergisst aber aufzuschreiben, was der Roboter tun soll, wenn es draußen trocken ist. Der Roboter stürzt ab!</p>
+                        <p className="font-bold mt-4">Welche Regel hat Tina hier gebrochen?</p>
+                        <div className="space-y-3 mt-4">
+                            {opts.map(opt => <button key={opt.id} onClick={()=>handlePick(opt)} className="w-full p-4 rounded-xl border-4 font-bold text-left bg-white hover:bg-gray-50 transition-all text-gray-800">{opt.text}</button>)}
+                        </div>
+                    </DialogBox>
+                    {errorMsg && <p className="text-center font-bold text-red-500 animate-pop-in">{errorMsg}</p>}
+                </div>
+            );
+        };
+        const L5_3 = ({ onComplete }) => (
+            <MCBossGauntlet
+                title="Boss: Der Entscheider" icon="fa-scale-balanced" colorClass="bg-purple-100 border-purple-300 text-purple-900" textClass="text-purple-600"
+                questions={[
+                    { q: "Code: 'WENN rote Ampel, DANN warte.' Die Ampel ist GRÜN. Was tut der Roboter?", options: [
+                        { text: "Er wartet nicht (er geht weiter).", correct: true }, { text: "Er wartet.", correct: false }, { text: "Er geht rückwärts.", correct: false }, { text: "Er explodiert.", correct: false }
+                    ]},
+                    { q: "Code: 'WENN links frei ist, DANN drehe links, SONST drehe rechts.' Links steht eine dicke Kiste im Weg! Wohin dreht Robbie?", options: [
+                        { text: "Er dreht rechts.", correct: true }, { text: "Er dreht links.", correct: false }, { text: "Er geht vorwärts.", correct: false }, { text: "Er dreht sich im Kreis.", correct: false }
+                    ]},
+                    { q: "Warum sind 'Bedingungen' beim Programmieren so wichtig?", options: [
+                        { text: "Weil der Roboter so auf verschiedene Situationen reagieren kann.", correct: true }, { text: "Weil sie den Code bunter machen.", correct: false }, { text: "Weil der Roboter sonst traurig ist.", correct: false }, { text: "Weil sie Fehler löschen.", correct: false }
+                    ]}
+                ]}
+                onComplete={onComplete}
+            />
+        );
+
+        // WELT 6: DIAGRAMME (Erweitert auf 4 Level)
+        const L6_1 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Flussdiagramme" icon="fa-project-diagram" color="blue">
+                    <p>Texte sind oft schwer zu lesen. Um Algorithmen übersichtlich darzustellen, zeichnet man sie! Ein <strong>Flussdiagramm</strong> zeigt den Weg mit Pfeilen. Es gibt drei wichtige Bausteine:</p>
+                    <div className="flex flex-col gap-4 mt-4 font-bold text-sm bg-white p-4 rounded-xl border border-blue-200 text-gray-800">
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] text-blue-900">START</div>
+                            <span>Ovale für Start und Ende</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-8 rounded-md bg-green-100 border-2 border-green-500 flex items-center justify-center text-[10px] text-green-900">Aktion</div>
+                            <span>Rechtecke für normale Anweisungen</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-10 bg-orange-100 border-2 border-orange-500 flex items-center justify-center text-[10px] text-orange-900" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}>Frage?</div>
+                            <span>Rauten für Bedingungen (WENN-DANN)</span>
+                        </div>
+                    </div>
+                </DialogBox>
+                <ReadTimerButton color="blue" onClick={onComplete}>Pfeilen folgen!</ReadTimerButton>
+            </div>
+        );
+
+        const L6_2 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Struktogramme" icon="fa-layer-group" color="purple">
+                    <p>Das <strong>Struktogramm</strong> (Nassi-Shneiderman-Diagramm) kommt ganz ohne Pfeile aus! Die Blöcke werden einfach von oben nach unten ineinander gestapelt.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
                         <div className="flex flex-col items-center">
-                            <p className="font-bold text-xs mb-2 text-purple-800 bg-purple-100 px-2 py-1 rounded-md">2. Verzweigung (Wenn...)</p>
-                            <div className="flex flex-col w-full max-w-[150px] border-2 border-black text-[11px] font-bold text-center bg-white h-full shadow-md">
-                                <div className="relative border-b-2 border-black h-[40px] flex items-center justify-center bg-gray-200 overflow-hidden">
+                            <p className="text-xs font-bold text-gray-500 mb-2">1. Bedingung (WENN-DANN)</p>
+                            <div className="flex flex-col w-full max-w-[160px] border-2 border-black text-[10px] font-bold text-center bg-white shadow-sm text-gray-800">
+                                <div className="relative border-b-2 border-black h-[40px] flex items-center justify-center bg-gray-200">
                                     <svg className="absolute inset-0 w-full h-full pointer-events-none"><line x1="0" y1="0" x2="50%" y2="100%" stroke="black" strokeWidth="2"/><line x1="100%" y1="0" x2="50%" y2="100%" stroke="black" strokeWidth="2"/></svg>
-                                    <div className="z-10 bg-white/90 px-1 rounded shadow-sm text-[10px]">Hunger?</div>
-                                    <span className="absolute bottom-0 left-1 text-[9px] font-black text-green-700">JA</span>
-                                    <span className="absolute bottom-0 right-1 text-[9px] font-black text-red-700">NEIN</span>
+                                    <span className="z-10 bg-white/90 px-1 rounded">Regnet es?</span>
+                                    <span className="absolute bottom-0 left-2 text-green-700">JA</span>
+                                    <span className="absolute bottom-0 right-2 text-red-700">NEIN</span>
                                 </div>
-                                <div className="flex flex-1">
-                                    <div className="w-1/2 border-r-2 border-black flex items-center justify-center p-1 bg-gray-50">Essen</div>
-                                    <div className="w-1/2 flex items-center justify-center p-1 text-gray-400 bg-gray-50">Nichts</div>
+                                <div className="flex">
+                                    <div className="w-1/2 border-r-2 border-black p-2 bg-gray-50">Schirm</div>
+                                    <div className="w-1/2 p-2 bg-gray-50">Sonnenbrille</div>
                                 </div>
                             </div>
                         </div>
-
-                        {/* 3. Schleife */}
                         <div className="flex flex-col items-center">
-                            <p className="font-bold text-xs mb-2 text-purple-800 bg-purple-100 px-2 py-1 rounded-md">3. Schleife (Umgedrehtes L)</p>
-                            <div className="flex flex-col w-full max-w-[150px] border-2 border-black text-xs font-bold text-center bg-white h-full shadow-md">
-                                <div className="border-b-2 border-black bg-yellow-100 p-1 text-left">
-                                    <i className="fa-solid fa-rotate-right mr-1 text-yellow-600"></i> 3 mal:
+                            <p className="text-xs font-bold text-gray-500 mb-2">2. Schleife (WIEDERHOLE)</p>
+                            <div className="flex flex-col w-full max-w-[160px] border-2 border-black text-[10px] font-bold text-center bg-white shadow-sm text-gray-800">
+                                <div className="border-b-2 border-black bg-yellow-100 p-2 text-left flex items-center gap-2 text-yellow-900">
+                                    <i className="fa-solid fa-rotate-right text-yellow-600"></i> SOLANGE Hunger:
                                 </div>
-                                <div className="flex flex-1">
+                                <div className="flex">
                                     <div className="w-6 border-r-2 border-black bg-yellow-100"></div>
-                                    <div className="flex-1 flex items-center justify-center p-1 bg-gray-50">Klatschen</div>
+                                    <div className="flex-1 p-2 bg-gray-50">Brot essen</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </DialogBox>
-                <ReadTimerButton color="purple" onClick={onComplete}>Gestapelt, ohne Pfeile!</ReadTimerButton>
+                <ReadTimerButton color="purple" onClick={onComplete}>Kästen stapeln!</ReadTimerButton>
             </div>
         );
-        const L5_2 = ({ onComplete }) => (
+
+        const L6_3 = ({ onComplete }) => (
             <MCLevel 
-                title="Der große Unterschied" icon="fa-magnifying-glass" color="orange"
-                text="Woran unterscheidet man auf den allerersten Blick ein Struktogramm von einem Flussdiagramm?"
+                title="Der erste Blick" icon="fa-eye" color="green"
+                text="Woran erkennst du ein Struktogramm sofort (im Vergleich zum Flussdiagramm)?"
                 options={[
-                    { text: "Ein Struktogramm hat keine Pfeile.", correct: true },
-                    { text: "Ein Struktogramm nutzt bunte Rauten.", correct: false, msg: "Rauten gibt es nur im Flussdiagramm!" },
-                    { text: "Ein Struktogramm liest man von unten nach oben.", correct: false, msg: "Beide liest man grundsätzlich von oben nach unten." },
-                    { text: "Ein Struktogramm ist nur für Roboter lesbar.", correct: false, msg: "Struktogramme sind extra für Menschen gemacht." }
-                ]}
-                onComplete={onComplete}
-            />
-        );
-        const L5_3 = ({ onComplete }) => (
-            <MCBossGauntlet
-                title="Boss: Struktur-Wissen" icon="fa-cubes-stacked" colorClass="bg-purple-100 border-purple-300 text-purple-900" textClass="text-purple-600"
-                questions={[
-                    { q: "Wie zeichnet man eine Verzweigung (Bedingung / WENN-DANN) in einem Struktogramm?", options: [
-                        { text: "Durch ein geteiltes Rechteck mit einem Dreieck oben (für die Frage).", correct: true }, { text: "Durch eine bunte Raute mit Pfeilen.", correct: false }, { text: "Durch einen unsichtbaren Kasten.", correct: false }, { text: "Durch einen Kreis.", correct: false }
-                    ]},
-                    { q: "Wie sieht eine Schleife (Wiederholung) im Struktogramm aus?", options: [
-                        { text: "Wie ein großes L (oder C), das die inneren Anweisungen umklammert.", correct: true }, { text: "Wie ein Pfeil, der nach oben zeigt.", correct: false }, { text: "Wie eine Raute.", correct: false }, { text: "Die gibt es im Struktogramm nicht.", correct: false }
-                    ]},
-                    { q: "Wer hat das Struktogramm erfunden?", options: [
-                        { text: "Nassi und Shneiderman", correct: true }, { text: "Albert Einstein", correct: false }, { text: "Robbie der Roboter", correct: false }, { text: "Bill Gates", correct: false }
-                    ]}
+                    { text: "Es hat keine Pfeile!", correct: true },
+                    { text: "Es ist immer rot markiert.", correct: false, msg: "Die Farbe spielt keine Rolle." },
+                    { text: "Es nutzt Ovale für Start und Ende.", correct: false, msg: "Das macht das Flussdiagramm!" },
+                    { text: "Es ist nur für Computer lesbar.", correct: false, msg: "Diagramme sind immer für Menschen!" }
                 ]}
                 onComplete={onComplete}
             />
         );
 
-        // WELT 6: DER MEISTER-TEST (8-STAGE DRAG & DROP BOSS)
-        const L6_1 = ({ onComplete }) => (
-            <div className="animate-pop-in">
-                <DialogBox title="Die Praxis-Prüfung" icon="fa-wrench" color="red">
-                    <p>Du kennst nun die Theorie zu Flussdiagrammen und Struktogrammen.</p>
-                    <p>Jetzt wird es ernst! Du musst für den Boss <b>8 Diagramme</b> selbst zusammenbauen.</p>
-                    <ul className="list-disc list-inside space-y-2 font-bold text-red-900 bg-white p-4 rounded-xl border border-red-200 text-sm mt-4">
-                        <li><b>Runde 1-4:</b> Flussdiagramme bauen.</li>
-                        <li><b>Runde 5-8:</b> Struktogramme bauen.</li>
-                    </ul>
-                    <p className="mt-4 text-sm font-bold text-gray-600">Tipp: Tippe erst auf den gewünschten Block unten, und dann auf das leere gestrichelte Feld oben im Diagramm!</p>
-                </DialogBox>
-                <ReadTimerButton color="red" onClick={onComplete}>Ich bin bereit zu bauen!</ReadTimerButton>
-            </div>
-        );
-        const L6_2 = ({ onComplete }) => (
-            <MCLevel 
-                title="Letzter Check" icon="fa-clipboard-check" color="yellow"
-                text="Eine letzte Frage, bevor die Prüfung startet: In welchem Diagramm findest du das OVAL für 'Start' und 'Ende'?"
-                options={[
-                    { text: "Im Flussdiagramm", correct: true },
-                    { text: "Im Struktogramm", correct: false, msg: "Falsch! Im Struktogramm gibt es nur einfache, gestapelte Rechtecke für alles." },
-                    { text: "In beiden Diagrammen", correct: false, msg: "Falsch! Struktogramme nutzen keine Ovale." }
-                ]}
-                onComplete={onComplete}
-            />
-        );
-        const L6_3 = ({ onComplete }) => {
+        const L6_4 = ({ onComplete }) => {
             const dragTasks = [
-                // FLOWCHARTS (1-4)
                 {
-                    title: "Flussdiagramm: Ein kleiner Schritt",
+                    title: "Flussdiagramm: Sequenz",
                     layout: "flow-3",
-                    blocks: [{id: 1, text: 'START'}, {id: 2, text: 'Gehe vorwärts'}, {id: 3, text: 'ENDE'}],
+                    blocks: [{id: 1, text: 'START'}, {id: 2, text: 'Aktion'}, {id: 3, text: 'ENDE'}],
                     solution: [1, 2, 3]
                 },
                 {
-                    title: "Flussdiagramm: Abbiegen",
-                    layout: "flow-4",
-                    blocks: [{id: 1, text: 'START'}, {id: 2, text: 'ENDE'}, {id: 3, text: 'Drehe links'}, {id: 4, text: 'Gehe vor'}],
-                    solution: [1, 3, 4, 2]
+                    title: "Struktogramm: Sequenz",
+                    layout: "struct-3",
+                    blocks: [{id: 1, text: 'Schritt 1'}, {id: 2, text: 'Schritt 2'}, {id: 3, text: 'Schritt 3'}],
+                    solution: [1, 2, 3]
                 },
                 {
                     title: "Flussdiagramm: Verzweigung",
                     layout: "flow-branch",
-                    blocks: [{id: 1, text: 'Ist Wand vorne?'}, {id: 2, text: 'Drehe rechts'}, {id: 3, text: 'Gehe vorwärts'}],
-                    solution: [1, 2, 3] // 0=Diamond, 1=Ja, 2=Nein
-                },
-                {
-                    title: "Flussdiagramm: Die Schleife",
-                    layout: "flow-branch", // Wir tricksen das Layout als einfache Bedingung, aber textlich als Schleife
-                    blocks: [{id: 1, text: 'Socken da?'}, {id: 2, text: 'Sammeln & zurück'}, {id: 3, text: 'ENDE'}],
-                    solution: [1, 2, 3]
-                },
-                // STRUKTOGRAMME (5-8)
-                {
-                    title: "Struktogramm: Kurze Sequenz",
-                    layout: "struct-2",
-                    blocks: [{id: 1, text: 'Zahnbürste nehmen'}, {id: 2, text: 'Zähne putzen'}],
-                    solution: [1, 2]
-                },
-                {
-                    title: "Struktogramm: Lange Sequenz",
-                    layout: "struct-3",
-                    blocks: [{id: 1, text: 'Buch aufschlagen'}, {id: 2, text: 'Buch lesen'}, {id: 3, text: 'Buch zuklappen'}],
+                    blocks: [{id: 1, text: 'Frage?'}, {id: 2, text: 'JA-Aktion'}, {id: 3, text: 'NEIN-Aktion'}],
                     solution: [1, 2, 3]
                 },
                 {
                     title: "Struktogramm: WENN-DANN",
                     layout: "struct-if",
-                    blocks: [{id: 1, text: 'Regnet es heute?'}, {id: 2, text: 'Regenschirm'}, {id: 3, text: 'Sonnenbrille'}],
+                    blocks: [{id: 1, text: 'Bedingung?'}, {id: 2, text: 'JA-Aktion'}, {id: 3, text: 'NEIN-Aktion'}],
                     solution: [1, 2, 3]
                 },
                 {
-                    title: "Struktogramm: WIEDERHOLE",
+                    title: "Flussdiagramm: Umweg",
+                    layout: "flow-4",
+                    blocks: [{id: 1, text: 'START'}, {id: 2, text: 'ENDE'}, {id: 3, text: 'Drehe links'}, {id: 4, text: 'Gehe vor'}],
+                    solution: [1, 3, 4, 2]
+                },
+                {
+                    title: "Struktogramm: Schleife",
                     layout: "struct-loop",
-                    blocks: [{id: 1, text: 'SOLANGE Socken da sind:'}, {id: 2, text: 'Hebe Socke auf'}],
+                    blocks: [{id: 1, text: 'SOLANGE Hunger da ist:'}, {id: 2, text: 'Pausenbrot essen'}],
                     solution: [1, 2]
                 }
             ];
@@ -1090,7 +1120,7 @@
             );
         };
 
-        // --- WELT 7: ROBO-ARENA (MINI-GAME, ehemals W9/W5) ---
+        // --- WELT 7: ROBO-ARENA (MINI-GAME) ---
         const RoboArenaGame = ({ onComplete }) => {
             const [level, setLevel] = useState(1);
             const maxLevel = 18; 
@@ -1234,14 +1264,20 @@
         };
 
 
-        // --- WELT DEFINITIONEN (AKTUALISIERT AUF 7 WELTEN) ---
+        // --- WELT DEFINITIONEN ---
         const WORLDS = [
             { id: 1, title: "Grundlagen", levels: [{n: "1-1", C: L1_1}, {n: "1-2", C: L1_2}, {n: "1-3", C: L1_3, boss: true}] },
-            { id: 2, title: "Roboter-Mission", levels: [{n: "2-1", C: L2_1}, {n: "2-2", C: L2_2}, {n: "2-3", C: L2_3, boss: true}] },
-            { id: 3, title: "Die 4 Regeln", levels: [{n: "3-1", C: L3_1}, {n: "3-2", C: L3_2}, {n: "3-3", C: L3_3}, {n: "3-4", C: L3_4}, {n: "3-5", C: L3_5, boss: true}] },
-            { id: 4, title: "Flussdiagramme", levels: [{n: "4-1", C: L4_1}, {n: "4-2", C: L4_2}, {n: "4-3", C: L4_3, boss: true}] },
-            { id: 5, title: "Struktogramme", levels: [{n: "5-1", C: L5_1}, {n: "5-2", C: L5_2}, {n: "5-3", C: L5_3, boss: true}] },
-            { id: 6, title: "Meister-Test", levels: [{n: "6-1", C: L6_1}, {n: "6-2", C: L6_2}, {n: "6-3", C: L6_3, boss: true}] },
+            { id: 2, title: "Roboter-Mission", levels: [
+                {n: "2-1", C: L2_1}, 
+                {n: "2-2", C: L2_2}, 
+                {n: "2-3", C: L2_3}, 
+                {n: "2-4", C: L2_4}, 
+                {n: "2-5", C: L2_5, boss: true}
+            ] },
+            { id: 3, title: "Regeln für Sequenzen", levels: [{n: "3-1", C: L3_1}, {n: "3-2", C: L3_2}, {n: "3-3", C: L3_3}, {n: "3-4", C: L3_4}, {n: "3-5", C: L3_5, boss: true}] },
+            { id: 4, title: "Schleifen", levels: [{n: "4-1", C: L4_1}, {n: "4-2", C: L4_2}, {n: "4-3", C: L4_3, boss: true}] },
+            { id: 5, title: "Bedingungen", levels: [{n: "5-1", C: L5_1}, {n: "5-2", C: L5_2}, {n: "5-3", C: L5_3, boss: true}] },
+            { id: 6, title: "Diagramme", levels: [{n: "6-1", C: L6_1}, {n: "6-2", C: L6_2}, {n: "6-3", C: L6_3}, {n: "6-4", C: L6_4, boss: true}] },
             { id: 7, title: "Roboter-Arena", levels: [{n: "7-1", C: RoboArenaGame, boss: true}] },
         ];
 
@@ -1256,25 +1292,34 @@
             const [cheatPw, setCheatPw] = useState('');
 
             const isUnlocked = (lvlId) => {
+                if (lvlId === '7-1') {
+                    const [mw] = maxUnlocked === 'win' ? [7] : maxUnlocked.split('-').map(Number);
+                    return mw >= 4;
+                }
+                if (maxUnlocked === 'win') return true;
                 const [w1, l1] = lvlId.split('-').map(Number);
                 const [w2, l2] = maxUnlocked.split('-').map(Number);
                 if (w1 < w2) return true;
                 if (w1 === w2 && l1 <= l2) return true;
                 return false;
             };
+
             const isCompleted = (lvlId) => {
-                const [w1, l1] = splitLvl(lvlId);
-                const [w2, l2] = splitLvl(maxUnlocked);
+                if (lvlId === '7-1') return false; // Arena is replayable
+                if (maxUnlocked === 'win') return true;
+                const [w1, l1] = lvlId.split('-').map(Number);
+                const [w2, l2] = maxUnlocked.split('-').map(Number);
                 if (w1 < w2) return true;
                 if (w1 === w2 && l1 < l2) return true;
                 return false;
             };
-            const splitLvl = (l) => l.split('-').map(Number);
-            
+
             const getLevelIndex = (lvlId) => {
-                if (lvlId === 'win') return WORLDS.reduce((acc, w) => acc + w.levels.length, 0);
+                const totalRegularLevels = WORLDS.filter(w => w.id !== 7).reduce((acc, w) => acc + w.levels.length, 0);
+                if (lvlId === 'win') return totalRegularLevels;
                 let index = 0;
                 for (let w of WORLDS) {
+                    if (w.id === 7) continue;
                     for (let l of w.levels) {
                         if (l.n === lvlId) return index;
                         index++;
@@ -1284,45 +1329,48 @@
             };
 
             const getNextLvl = (currId) => {
-                const [wStr, lStr] = currId.split('-');
-                const w = Number(wStr);
-                const l = Number(lStr);
+                if (currId === '6-4') return 'win';
+                const [w, l] = currId.split('-').map(Number);
                 const currentWorld = WORLDS.find(world => world.id === w);
-                
                 if (l < currentWorld.levels.length) {
                     return `${w}-${l+1}`;
                 } else {
-                    if (w < WORLDS.length) {
-                        return `${w+1}-1`;
-                    } else {
-                        return 'win';
-                    }
+                    return `${w+1}-1`;
                 }
             };
 
             const onLevelComplete = () => {
+                if (activeLevelId === '7-1') {
+                    setView('overview');
+                    return;
+                }
                 const nextId = getNextLvl(activeLevelId);
-                if (nextId === 'win') { setView('win'); } 
-                else {
-                    const [nextW, nextL] = splitLvl(nextId);
+                if (nextId === 'win') { 
+                    setMaxUnlocked('win');
+                    setView('win'); 
+                } else {
+                    const [nextW, nextL] = nextId.split('-').map(Number);
                     if (!isUnlocked(nextId)) setMaxUnlocked(nextId);
                     if (nextW > activeWorldId) { setView('overview'); } else { setView('world'); }
                 }
             };
+
             const handleCheat = () => { if(cheatPw === 'Sonnenschein') { setMaxUnlocked('7-1'); setShowCheatModal(false); setCheatPw(''); } };
 
-            const [maxW, maxL] = splitLvl(maxUnlocked);
+            const maxW = maxUnlocked === 'win' ? 7 : maxUnlocked.split('-').map(Number)[0];
+            const maxL = maxUnlocked === 'win' ? 1 : maxUnlocked.split('-').map(Number)[1];
+            
             const totalLevelsCompleted = getLevelIndex(maxUnlocked);
             const xp = totalLevelsCompleted * 10;
-            const maxXP = WORLDS.reduce((acc, w) => acc + w.levels.length, 0) * 10;
+            const maxXP = WORLDS.filter(w => w.id !== 7).reduce((acc, w) => acc + w.levels.length, 0) * 10;
 
             if (view === 'win') {
                 return (
                     <div className="min-h-screen bg-black flex items-center justify-center p-4">
                         <div className="bg-gray-900 p-12 rounded-[3rem] text-center max-w-2xl border-8 border-cyan-500 shadow-[0_0_50px_rgba(0,255,255,0.4)] animate-pop-in">
                             <i className="fa-solid fa-user-astronaut text-9xl mb-8 animate-float block neon-text"></i>
-                            <h1 className="text-5xl font-black mb-6 neon-text font-mono glitch-text">ARENA BEZWUNGEN!</h1>
-                            <p className="text-xl text-cyan-300 mb-8 font-mono">Du hast die Roboter-Arena gemeistert und bist eine absolute Programmier-Legende!</p>
+                            <h1 className="text-5xl font-black mb-6 neon-text font-mono glitch-text">ALGO-MEISTER!</h1>
+                            <p className="text-xl text-cyan-300 mb-8 font-mono">Du hast alle Level gemeistert. Falls noch nicht geschehen, teste jetzt die Roboter-Arena!</p>
                             <Button3D color="black" onClick={() => { setMaxUnlocked('1-1'); setActiveWorldId(1); setView('overview'); }}>NEUSTART</Button3D>
                         </div>
                     </div>
@@ -1332,7 +1380,7 @@
             if (view === 'level') {
                 let LvlComp = null;
                 WORLDS.forEach(w => w.levels.forEach(l => { if(l.n === activeLevelId) LvlComp = l.C; }));
-                const isArena = activeWorldId === WORLDS.length;
+                const isArena = activeWorldId === 7;
                 return (
                     <div className={`min-h-screen ${isArena ? 'bg-black' : 'bg-screenshot-dark'} flex items-center justify-center p-4 md:p-8`}>
                         <div className={`w-full max-w-4xl bg-white rounded-[2rem] overflow-hidden animate-pop-in ${isArena ? 'border-8 border-cyan-600 shadow-[0_0_30px_#00ffff]' : ''}`}>
@@ -1374,8 +1422,9 @@
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                                 {WORLDS.map((w, i) => {
-                                    const wUnlocked = isUnlocked(`${w.id}-1`);
-                                    const isArena = w.id === WORLDS.length;
+                                    const isArena = w.id === 7;
+                                    const wUnlocked = isArena ? (maxW >= 4) : isUnlocked(`${w.id}-1`);
+                                    
                                     return (
                                         <button 
                                             key={w.id} disabled={!wUnlocked} onClick={() => { setActiveWorldId(w.id); setView('world'); }}
@@ -1383,20 +1432,26 @@
                                             style={{ animationDelay: `${i * 100}ms` }}
                                         >
                                             <div className={`w-20 h-20 rounded-full flex items-center justify-center text-4xl shadow-inner mb-4 backdrop-blur-sm ${isArena ? 'bg-gray-900 border-2 border-cyan-500 text-cyan-400' : 'bg-white/20'}`}>
-                                                {wUnlocked ? (isArena ? <i className="fa-solid fa-robot"></i> : <span className="font-black">{w.id}</span>) : <i className="fa-solid fa-lock text-gray-300"></i>}
+                                                {wUnlocked ? (isArena ? <i className="fa-solid fa-gamepad"></i> : <span className="font-black">{w.id}</span>) : <i className="fa-solid fa-lock text-gray-300"></i>}
                                             </div>
                                             <h2 className={`font-black text-2xl mb-2 drop-shadow-md text-center ${isArena ? 'neon-text font-mono glitch-text' : ''}`}>{w.title}</h2>
                                             
                                             {/* Algo auf der Karte anzeigen */}
-                                            {wUnlocked && activeWorldId === w.id && (
+                                            {wUnlocked && activeWorldId === w.id && !isArena && (
                                                 <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
                                                     <AlgoCharacter />
                                                 </div>
                                             )}
 
-                                            {wUnlocked && maxUnlocked.startsWith(`${w.id}-`) && (
-                                                <div className={`absolute -top-4 -right-4 text-white font-black px-4 py-2 rounded-full shadow-lg animate-bounce border-2 ${isArena ? 'bg-black border-cyan-500 text-cyan-400' : 'bg-red-500 border-white'}`}>
+                                            {wUnlocked && maxUnlocked.startsWith(`${w.id}-`) && !isArena && (
+                                                <div className={`absolute -top-4 -right-4 text-white font-black px-4 py-2 rounded-full shadow-lg animate-bounce border-2 bg-red-500 border-white`}>
                                                     HIER!
+                                                </div>
+                                            )}
+
+                                            {isArena && wUnlocked && (
+                                                <div className="absolute -top-4 -right-4 text-white font-black px-4 py-1 rounded-full shadow-lg animate-pulse border-2 bg-black border-cyan-500 text-cyan-400 text-xs">
+                                                    ZUSATZ-SPIEL
                                                 </div>
                                             )}
                                         </button>
@@ -1409,13 +1464,15 @@
             }
 
             const W = WORLDS.find(w => w.id === activeWorldId);
-            const isArena = W.id === WORLDS.length;
+            const isArena = W.id === 7;
             let worldProgress = 0;
             if (maxW > W.id) worldProgress = 100;
             else if (maxW === W.id) worldProgress = Math.round(((maxL - 1) / W.levels.length) * 100);
 
             const currentNodes = W.levels.length === 5 ? [
                 { left: '15%', top: '80%' }, { left: '35%', top: '65%' }, { left: '55%', top: '50%' }, { left: '75%', top: '35%' }, { left: '85%', top: '15%' }
+            ] : W.levels.length === 4 ? [
+                { left: '15%', top: '75%' }, { left: '40%', top: '55%' }, { left: '65%', top: '35%' }, { left: '85%', top: '15%' }
             ] : W.levels.length === 3 ? [
                 { left: '20%', top: '75%' }, { left: '50%', top: '50%' }, { left: '75%', top: '25%' }
             ] : [
@@ -1431,7 +1488,7 @@
                         </div>
                         {!isArena && (
                             <div className="flex items-center gap-4">
-                                <div className="text-right"><div className="font-black text-screenshot-dark text-sm leading-tight">LEVEL {maxW}</div><div className="text-xs text-gray-500 font-bold">{xp} / {maxXP} XP</div></div>
+                                <div className="text-right"><div className="font-black text-screenshot-dark text-sm leading-tight">LEVEL {maxW > 6 ? 6 : maxW}</div><div className="text-xs text-gray-500 font-bold">{xp} / {maxXP} XP</div></div>
                                 <div className="w-24 md:w-40 h-6 bg-screenshot-panel rounded-full overflow-hidden border border-gray-300"><div className="h-full bg-blue-500" style={{ width: `${(xp/maxXP)*100}%` }}></div></div>
                             </div>
                         )}
@@ -1460,7 +1517,7 @@
                             </div>
 
                             {W.id > 1 && <button onClick={()=>setActiveWorldId(w=>w-1)} className={`absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold shadow-md z-40 transition-colors ${isArena ? 'bg-gray-800 text-cyan-500 hover:bg-black border border-cyan-500' : 'bg-white/80 hover:bg-white'}`}><i className="fa-solid fa-chevron-left"></i></button>}
-                            {W.id < WORLDS.length && isUnlocked(`${W.id+1}-1`) && <button onClick={()=>setActiveWorldId(w=>w+1)} className={`absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold shadow-md z-40 transition-colors ${isArena ? 'bg-gray-800 text-cyan-500 hover:bg-black border border-cyan-500' : 'bg-white/80 hover:bg-white'}`}><i className="fa-solid fa-chevron-right"></i></button>}
+                            {W.id < 7 && isUnlocked(`${W.id+1}-1`) && <button onClick={()=>setActiveWorldId(w=>w+1)} className={`absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold shadow-md z-40 transition-colors ${isArena ? 'bg-gray-800 text-cyan-500 hover:bg-black border border-cyan-500' : 'bg-white/80 hover:bg-white'}`}><i className="fa-solid fa-chevron-right"></i></button>}
 
                             {!isArena && (
                                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
@@ -1479,8 +1536,8 @@
                             {W.levels.map((l, idx) => {
                                 const unl = isUnlocked(l.n);
                                 const comp = isCompleted(l.n);
-                                const curr = l.n === maxUnlocked;
-                                const isAlgoHere = (W.id === maxW && (idx + 1) === maxL) || (W.id < maxW && idx === W.levels.length - 1);
+                                const curr = l.n === maxUnlocked && !isArena;
+                                const isAlgoHere = !isArena && ((W.id === maxW && (idx + 1) === maxL) || (W.id < maxW && idx === W.levels.length - 1));
                                 const pos = isArena ? { left: '50%', top: '50%' } : currentNodes[idx];
 
                                 return (
