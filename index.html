@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Algo World 3D - Regeln & Analyse</title>
+    <title>Super Algo World 3D - Hard Mode</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -111,12 +111,39 @@
                     <div className="absolute -top-1 -right-1 w-0 h-0 border-r-[10px] border-r-sky-300 border-t-[10px] border-t-sky-300"></div>
                     <div className="flex gap-1.5 mb-1"><div className="w-1.5 h-1.5 bg-black rounded-full"></div><div className="w-1.5 h-1.5 bg-black rounded-full"></div></div>
                     <div className="w-3 h-1.5 border-b-2 border-black rounded-full mb-1"></div>
-                    <div className="w-6 h-0.5 bg-gray-300 mb-1 rounded"></div><div className="w-4 h-0.5 bg-gray-300 mb-1 rounded"></div><div className="w-5 h-0.5 bg-gray-300 rounded"></div>
+                    <div className="w-5 h-0.5 bg-gray-300 rounded"></div>
                 </div>
             </div>
         );
 
         // --- NEUE HILFS-KOMPONENTEN FÜR LEVEL UND BOSSE ---
+
+        const ReadTimerButton = ({ onClick, color, children }) => {
+            const [timeLeft, setTimeLeft] = useState(20); // Fest auf 20 Sekunden eingestellt
+            
+            useEffect(() => {
+                if (timeLeft > 0) {
+                    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+                    return () => clearTimeout(timer);
+                }
+            }, [timeLeft]);
+            
+            const isWaiting = timeLeft > 0;
+            
+            return (
+                <Button3D 
+                    color={isWaiting ? "gray" : color} 
+                    onClick={onClick} 
+                    disabled={isWaiting} 
+                >
+                    {isWaiting ? (
+                        <span className="flex justify-center items-center gap-2 text-gray-100">
+                            <i className="fa-solid fa-hourglass-half animate-spin"></i> Bitte lesen... ({timeLeft}s)
+                        </span>
+                    ) : children}
+                </Button3D>
+            );
+        };
 
         const MCLevel = ({ title, icon, color, text, options, onComplete }) => {
             const [opts, setOpts] = useState(() => shuffleArray(options));
@@ -145,7 +172,7 @@
             return (
                 <div className="animate-pop-in">
                     <DialogBox title={title} icon={icon} color={color}>
-                        <p className="mb-4">{text}</p>
+                        <div className="mb-4">{text}</div>
                         <div className="space-y-3">
                             {opts.map((opt, i) => {
                                 let btnStyle = "bg-white hover:bg-gray-50 border-gray-200 text-gray-800";
@@ -183,7 +210,7 @@
                 if (opt.correct) {
                     setMsg('Richtig!');
                     await sleep(800);
-                    if (stage < 2) {
+                    if (stage < questions.length - 1) {
                         setStage(s => s + 1);
                         setOpts(shuffleArray(questions[stage + 1].options));
                         setMsg('');
@@ -193,19 +220,25 @@
                         setStatus('won');
                     }
                 } else {
-                    setShake(true); setTimeout(() => setShake(false), 300);
-                    setMsg('Falsch!');
-                    await sleep(1000);
-                    if (lives > 1) {
-                        setLives(l => l - 1);
-                        setMsg('Du verlierst ein Leben!');
-                        setOpts(shuffleArray([...opts]));
-                        setSelectedId(null);
-                        setIsLocked(false);
-                    } else {
-                        setLives(0);
-                        setStatus('gameover');
-                    }
+                    handleFail('Falsch!');
+                }
+            };
+
+            const handleFail = async (failureMessage) => {
+                setIsLocked(true);
+                setShake(true); setTimeout(() => setShake(false), 300);
+                setMsg(failureMessage);
+                await sleep(1200);
+                
+                if (lives > 1) {
+                    setLives(l => l - 1);
+                    setMsg('Du verlierst ein Leben!');
+                    setOpts(shuffleArray([...opts]));
+                    setSelectedId(null);
+                    setIsLocked(false);
+                } else {
+                    setLives(0);
+                    setStatus('gameover');
                 }
             };
 
@@ -221,7 +254,7 @@
                     <div className="text-center animate-pop-in mt-6">
                         <i className={`fa-solid fa-trophy text-7xl ${textClass} mb-4 animate-bounce`}></i>
                         <h2 className="text-3xl font-black mb-4">Boss besiegt!</h2>
-                        <p className="text-gray-600 font-bold mb-6">Alle 3 Fragen richtig beantwortet!</p>
+                        <p className="text-gray-600 font-bold mb-6">Alle Fragen richtig beantwortet!</p>
                         <Button3D color="purple" onClick={onComplete}>Weiter 🚀</Button3D>
                     </div>
                 );
@@ -244,28 +277,30 @@
                         <div className="flex gap-1">
                             {[1, 2, 3].map(i => <i key={i} className={`fa-solid fa-heart text-2xl ${i <= lives ? 'text-red-500 animate-pulse' : 'text-gray-300'}`}></i>)}
                         </div>
-                        <div className="font-black text-gray-500 bg-gray-200 px-3 py-1 rounded-full text-sm">Frage {stage + 1} / 3</div>
+                        <div className="font-black text-gray-500 bg-gray-200 px-3 py-1 rounded-full text-sm">Frage {stage + 1} / {questions.length}</div>
                     </div>
 
                     <i className={`fa-solid ${icon} text-6xl ${textClass} mb-2 animate-float block`}></i>
                     <h2 className="text-3xl font-black mb-4">{title}</h2>
                     
-                    <p className={`${colorClass} p-4 rounded-2xl border-4 font-bold mb-6 text-sm text-left shadow-inner`}>
-                        {questions[stage].q}
-                    </p>
+                    <div className="flex flex-col md:flex-row gap-6 mb-6">
+                        <div className={`md:w-1/2 ${colorClass} p-4 rounded-2xl border-4 font-bold text-sm text-left shadow-inner flex flex-col justify-center`}>
+                            {questions[stage].q}
+                        </div>
 
-                    <div className="space-y-3 mb-6 text-left">
-                        {opts.map((opt, i) => {
-                            let btnStyle = "bg-white hover:border-gray-400 border-gray-300 text-gray-800";
-                            if (selectedId === opt.text) {
-                                btnStyle = opt.correct ? "border-green-500 bg-green-100 text-green-900" : "border-red-500 bg-red-100 text-red-900";
-                            }
-                            return (
-                                <button key={i} disabled={isLocked} onClick={() => handlePick(opt)} className={`w-full p-4 rounded-2xl border-4 font-bold text-sm transition-colors ${btnStyle}`}>
-                                    {opt.text}
-                                </button>
-                            );
-                        })}
+                        <div className="md:w-1/2 space-y-3 text-left flex flex-col justify-center">
+                            {opts.map((opt, i) => {
+                                let btnStyle = "bg-white hover:border-gray-400 border-gray-300 text-gray-800";
+                                if (selectedId === opt.text) {
+                                    btnStyle = opt.correct ? "border-green-500 bg-green-100 text-green-900" : "border-red-500 bg-red-100 text-red-900";
+                                }
+                                return (
+                                    <button key={i} disabled={isLocked} onClick={() => handlePick(opt)} className={`w-full p-4 rounded-2xl border-4 font-bold text-sm transition-colors ${btnStyle}`}>
+                                        {opt.text}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {msg && <p className={`font-black text-xl ${msg==='Richtig!' ? 'text-green-500' : 'text-red-500'}`}>{msg}</p>}
@@ -284,7 +319,7 @@
                     <p>Ein <strong>Algorithmus</strong> ist eine <strong>Abfolge von Anweisungen</strong>, mit der man ein Problem löst.</p>
                     <p>Das ist wie ein Kochrezept, eine Bastelanleitung für Lego oder der Weg zur Schule. Jeder Schritt ist eine kleine, klare Anweisung.</p>
                 </DialogBox>
-                <Button3D color="green" onClick={onComplete}>Anweisungen verstehen! 👍</Button3D>
+                <ReadTimerButton color="green" onClick={onComplete} duration={10}>Anweisungen verstehen! 👍</ReadTimerButton>
             </div>
         );
         const L1_2 = ({ onComplete }) => (
@@ -334,16 +369,40 @@
                     <p><b>Algo erklärt:</b> "Computer und Roboter denken nicht selbst. Sie tun nur exakt das, was man ihnen als Anweisung gibt!"</p>
                     <p>Du lernst jetzt, wie man einen kleinen Roboter namens <b>Robbie</b> steuert. Er kennt nur ganz einfache Befehle wie "Gehe vorwärts" oder "Drehe rechts".</p>
                 </DialogBox>
-                <Button3D color="orange" onClick={onComplete}>Ich übernehme die Steuerung!</Button3D>
+                <ReadTimerButton color="orange" onClick={onComplete}>Ich übernehme die Steuerung!</ReadTimerButton>
             </div>
         );
         const L2_2 = ({ onComplete }) => (
             <MCLevel 
                 title="Code im Kopf lesen" icon="fa-brain" color="blue"
-                text="Algo sagt: Robbie schaut nach oben. Was passiert, wenn er diesen Code abarbeitet: 1) Gehe 1 Feld vorwärts. 2) Drehe 90 Grad rechts. 3) Gehe 1 Feld vorwärts. 4) Drehe 90 Grad rechts. 5) Gehe 1 Feld vorwärts."
+                text={
+                    <div>
+                        <p className="mb-4 font-bold text-gray-700">Algo sagt: Robbie schaut nach oben auf seinem Startfeld (unten links). Was passiert, wenn er diesen Code abarbeitet?</p>
+                        <div className="flex flex-col sm:flex-row gap-6 items-center justify-center bg-blue-50 p-4 rounded-2xl border-2 border-blue-200 shadow-inner">
+                            <div className="relative bg-gray-800 border-4 border-gray-900 rounded-xl shadow-md box-content flex-shrink-0" style={{ width: '150px', height: '150px' }}>
+                                <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 pointer-events-none">
+                                    {[0,1,2,3,4,5,6,7,8].map(i => <div key={i} className="border border-gray-700"></div>)}
+                                </div>
+                                <div className="absolute flex items-center justify-center bg-yellow-400/20 border-2 border-yellow-400 border-dashed" style={{ left: '0px', top: '100px', width: '50px', height: '50px' }}>
+                                    <span className="text-[10px] font-black text-yellow-500 absolute bottom-0">START</span>
+                                </div>
+                                <div className="absolute flex items-center justify-center z-10" style={{ left: '0px', top: '100px', width: '50px', height: '50px' }}>
+                                    <i className="fa-solid fa-robot text-cyan-400 text-3xl drop-shadow-md"></i>
+                                </div>
+                            </div>
+                            <div className="font-mono bg-white p-4 rounded-xl border-2 border-gray-300 text-sm md:text-base text-gray-800 shadow-sm w-full text-left leading-relaxed">
+                                1. Gehe 1 Feld vorwärts.<br/>
+                                2. Drehe 90 Grad rechts.<br/>
+                                3. Gehe 1 Feld vorwärts.<br/>
+                                4. Drehe 90 Grad rechts.<br/>
+                                5. Gehe 1 Feld vorwärts.
+                            </div>
+                        </div>
+                    </div>
+                }
                 options={[
                     { text: "Er steht genau rechts neben seinem Startpunkt.", correct: true },
-                    { text: "Er steht wieder exakt auf seinem Startpunkt.", correct: false, msg: "Zeichne den Weg (Vor, Rechts, Vor, Rechts, Vor) mal mit dem Finger auf den Tisch!" },
+                    { text: "Er steht wieder exakt auf seinem Startpunkt.", correct: false, msg: "Zeichne den Weg mal mit dem Finger auf den Tisch!" },
                     { text: "Er steht zwei Felder vor seinem Startpunkt.", correct: false, msg: "Er ist zwischendurch abgebogen!" },
                     { text: "Er steht links neben seinem Startpunkt.", correct: false, msg: "Achte auf die Rechts-Drehungen!" }
                 ]}
@@ -476,7 +535,7 @@
                         </div>
                     )}
 
-                    {status === 'running' && <p className="text-blue-600 font-black animate-pulse">Fliegt...</p>}
+                    {status === 'running' && <p className="text-blue-600 font-black animate-pulse">Roboter fährt...</p>}
                     {status === 'fail' && <div className="animate-pop-in"><p className="text-red-500 font-bold mb-2">{msg}</p><Button3D color="red" className="py-2" onClick={reset}>Neustart</Button3D></div>}
                     {status === 'win' && <p className="text-green-600 font-black text-xl animate-bounce">{msg}</p>}
                 </div>
@@ -495,7 +554,7 @@
                         <li><b>4. Endlich:</b> Der Code läuft nicht für immer weiter.</li>
                     </ul>
                 </DialogBox>
-                <Button3D color="teal" onClick={onComplete}>Regeln verstanden!</Button3D>
+                <ReadTimerButton color="teal" onClick={onComplete} duration={12}>Regeln verstanden!</ReadTimerButton>
             </div>
         );
         const L3_2 = ({ onComplete }) => (
@@ -516,19 +575,19 @@
                 title="Boss: Der Bäcker" icon="fa-cake-candles" colorClass="bg-blue-100 border-blue-300 text-blue-900" textClass="text-blue-600"
                 questions={[
                     { q: "Ein Kochrezept sagt: 'Backe es ca. eine Stunde'. Welche Regel wird gebrochen?", options: [
-                        { text: "Eindeutigkeit ('ca.' ist ungenau)", correct: true },
+                        { text: "Eindeutigkeit", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false }
                     ]},
                     { q: "Im Rezept steht: 'Schütte das Mehl in die Schüssel. Öffne danach die Mehltüte'. Welche Regel ist gebrochen?", options: [
-                        { text: "Reihenfolge (Erst öffnen, dann schütten!)", correct: true },
+                        { text: "Reihenfolge", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false }
                     ]},
-                    { q: "'Rühre den Teig für immer weiter'. Welche Regel ist gebrochen?", options: [
-                        { text: "Endlichkeit (Der Roboter stoppt nie)", correct: true },
+                    { q: "Ein neuer Roboter bekommt den Code: 'Rühre den Teig für immer weiter'. Welche Regel ist gebrochen?", options: [
+                        { text: "Endlichkeit", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Reihenfolge", correct: false }
@@ -549,7 +608,7 @@
                         ✅ Richtig: "Gehe 1 Meter vorwärts."
                     </p>
                 </DialogBox>
-                <Button3D color="green" onClick={onComplete}>Muss 100% klar sein!</Button3D>
+                <ReadTimerButton color="green" onClick={onComplete} duration={10}>Muss 100% klar sein!</ReadTimerButton>
             </div>
         );
         const L4_2 = ({ onComplete }) => (
@@ -569,20 +628,20 @@
             <MCBossGauntlet
                 title="Boss: Der Navigationstrick" icon="fa-street-view" colorClass="bg-emerald-100 border-emerald-300 text-emerald-900" textClass="text-emerald-600"
                 questions={[
-                    { q: "Du sagst 'Drehe dich nach rechts!'. Dein Freund meint, das war links. Welche Regel ist gebrochen?", options: [
-                        { text: "Eindeutigkeit (Aus welcher Sicht rechts?)", correct: true },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Reihenfolge", correct: false },
-                        { text: "Endlichkeit", correct: false }
+                    { q: "Robbie bekommt den Befehl: 'Wenn du ein Hindernis siehst, weiche geschickt aus.' Welches Problem hat dieser Code?", options: [
+                        { text: "Er ist nicht eindeutig ('geschickt ausweichen' ist ungenau).", correct: true },
+                        { text: "Er ist nicht ausführbar.", correct: false },
+                        { text: "Er ist nicht in der richtigen Reihenfolge.", correct: false },
+                        { text: "Er ist nicht endlich.", correct: false }
                     ]},
-                    { q: "'Fahre ein bisschen schneller.' Welche Regel?", options: [
-                        { text: "Eindeutigkeit (Was heißt 'ein bisschen'?)", correct: true },
-                        { text: "Endlichkeit", correct: false },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Reihenfolge", correct: false }
+                    { q: "Befehl: 'Fahre so lange, bis du am Ziel bist.' Warum könnte das für einen Roboter nicht eindeutig sein?", options: [
+                        { text: "Das 'Ziel' ist nicht mit exakten Koordinaten definiert.", correct: true },
+                        { text: "Roboter haben keine Augen.", correct: false },
+                        { text: "Der Roboter wird niemals ankommen.", correct: false },
+                        { text: "Fahren ist keine ausführbare Aktion.", correct: false }
                     ]},
-                    { q: "'Mache das Licht an, wenn es dunkel wird.'", options: [
-                        { text: "Eindeutigkeit (Ab wann ist es 'dunkel'?)", correct: true },
+                    { q: "Ein Algorithmus sagt: 'Male ein Bild von einem schönen Haus.' Gegen welche Regel verstößt das am meisten?", options: [
+                        { text: "Eindeutigkeit", correct: true },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false },
                         { text: "Reihenfolge", correct: false }
@@ -600,7 +659,7 @@
                     <p>Ein Befehl kann noch so eindeutig sein: Wenn der Roboter oder Computer ihn körperlich oder technisch <b>nicht ausführen kann</b>, ist der Algorithmus kaputt.</p>
                     <p className="bg-white p-2 border-2 border-blue-200 rounded-xl mt-2 text-sm font-bold text-gray-700">Beispiel: Ein Toaster kann kein Auto fahren.</p>
                 </DialogBox>
-                <Button3D color="blue" onClick={onComplete}>Muss machbar sein!</Button3D>
+                <ReadTimerButton color="blue" onClick={onComplete} duration={10}>Muss machbar sein!</ReadTimerButton>
             </div>
         );
         const L5_2 = ({ onComplete }) => (
@@ -620,20 +679,20 @@
             <MCBossGauntlet
                 title="Boss: Der Unmögliche Code" icon="fa-dog" colorClass="bg-cyan-100 border-cyan-300 text-cyan-900" textClass="text-cyan-500"
                 questions={[
-                    { q: "Befehl an einen Hund: 'Lies das Mathe-Buch'. Welche Regel wird gebrochen?", options: [
-                        { text: "Ausführbarkeit (Hunde können nicht lesen)", correct: true },
+                    { q: "Befehl an einen Saugroboter: 'Steige die Treppe hinauf und sauge den 1. Stock.' Warum scheitert das?", options: [
+                        { text: "Ausführbarkeit", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Endlichkeit", correct: false },
                         { text: "Reihenfolge", correct: false }
                     ]},
-                    { q: "Befehl an einen Taschenrechner: 'Mache mir ein Spiegelei'. Welche Regel bricht das?", options: [
-                        { text: "Ausführbarkeit (Ein Taschenrechner kann nicht kochen)", correct: true },
+                    { q: "Ein Programm fordert den Computer auf: 'Erkenne, ob der Nutzer gerade traurig ist.' Welches logische Problem entsteht für die Maschine?", options: [
+                        { text: "Ausführbarkeit", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Reihenfolge", correct: false },
                         { text: "Endlichkeit", correct: false }
                     ]},
-                    { q: "Befehl an ein Auto: 'Schwimme durch den Ozean'. Welche Regel?", options: [
-                        { text: "Ausführbarkeit (Ein normales Auto sinkt)", correct: true },
+                    { q: "Ein Smart-Home-System bekommt den Code: 'Koche das Abendessen auf dem Herd', hat aber keine physischen Roboterarme. Regel?", options: [
+                        { text: "Ausführbarkeit", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Endlichkeit", correct: false },
                         { text: "Eindeutigkeit", correct: false }
@@ -651,7 +710,7 @@
                     <p>Ein Programm liest Code <strong>immer von oben nach unten</strong>.</p>
                     <p>Wenn du die Reihenfolge vertauschst, entsteht ein Logik-Fehler. Stell dir vor, ein Algorithmus soll dir Socken und Schuhe anziehen. Zuerst Schuhe, dann Socken? Das klappt nicht!</p>
                 </DialogBox>
-                <Button3D color="blue" onClick={onComplete}>Reihenfolge ist heilig!</Button3D>
+                <ReadTimerButton color="blue" onClick={onComplete} duration={10}>Reihenfolge ist heilig!</ReadTimerButton>
             </div>
         );
         const L6_2 = ({ onComplete }) => (
@@ -669,22 +728,22 @@
         );
         const L6_3 = ({ onComplete }) => (
             <MCBossGauntlet
-                title="Boss: Der Wasser-Roboter" icon="fa-glass-water" colorClass="bg-sky-100 border-sky-300 text-sky-900" textClass="text-sky-500"
+                title="Boss: Der Chaos-Roboter" icon="fa-list-check" colorClass="bg-sky-100 border-sky-300 text-sky-900" textClass="text-sky-500"
                 questions={[
-                    { q: "'1. Gieße Wasser ins Glas. 2. Nimm Glas aus dem Schrank.' Welche Regel wurde gebrochen?", options: [
-                        { text: "Reihenfolge (Wasser gießen, bevor das Glas da ist)", correct: true },
+                    { q: "Ein Programm soll ein Rechteck zeichnen: 1. Gehe 10 Schritte. 2. Setze den Stift auf das Papier. 3. Drehe dich. Warum wird anfangs keine Linie gemalt?", options: [
+                        { text: "Reihenfolge", correct: true },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Endlichkeit", correct: false },
                         { text: "Eindeutigkeit", correct: false }
                     ]},
-                    { q: "'1. Gehe in den Regen. 2. Spanne Schirm auf.'", options: [
-                        { text: "Reihenfolge (Du wirst nass, bevor der Schirm auf ist!)", correct: true },
-                        { text: "Eindeutigkeit", correct: false },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Endlichkeit", correct: false }
+                    { q: "'1. Sende die E-Mail ab. 2. Tippe die Nachricht. 3. Öffne das E-Mail-Programm.' Welcher Schritt muss logischerweise an Position 1 stehen?", options: [
+                        { text: "Schritt 3", correct: true },
+                        { text: "Schritt 2", correct: false },
+                        { text: "Schritt 1", correct: false },
+                        { text: "Keiner der Schritte", correct: false }
                     ]},
-                    { q: "'1. Schlucken. 2. Kauen. 3. Essen in Mund stecken.'", options: [
-                        { text: "Reihenfolge (Rückwärts!)", correct: true },
+                    { q: "Zuerst wird dem Computer befohlen, die Variable 'x' auf dem Bildschirm auszugeben. Erst im nächsten Schritt wird der Variablen der Wert '5' zugewiesen. Welcher Fehler ist das?", options: [
+                        { text: "Reihenfolge", correct: true },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Endlichkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false }
@@ -702,7 +761,7 @@
                     <p>Ein Algorithmus muss sein Problem lösen und danach <b>zu einem Ende kommen</b> (stoppen).</p>
                     <p>Wenn ein Code niemals aufhört, haben wir eine sogenannte "Endlosschleife". Der Computer stürzt dann ab, weil er für immer festhängt!</p>
                 </DialogBox>
-                <Button3D color="red" onClick={onComplete}>Code muss stoppen!</Button3D>
+                <ReadTimerButton color="red" onClick={onComplete} duration={10}>Code muss stoppen!</ReadTimerButton>
             </div>
         );
         const L7_2 = ({ onComplete }) => (
@@ -722,23 +781,23 @@
             <MCBossGauntlet
                 title="Boss: Der Unendliche Code" icon="fa-infinity" colorClass="bg-red-100 border-red-300 text-red-900" textClass="text-red-500"
                 questions={[
-                    { q: "Jemand programmiert den Roboter: '1. Schreibe die Zahl 1. 2. Schreibe alle folgenden Zahlen auf. Hör niemals damit auf.' Welche Regel bricht das?", options: [
-                        { text: "Endlichkeit (Es gibt unendlich viele Zahlen, er wird niemals fertig!)", correct: true },
+                    { q: "Ein Roboter soll die mathematische Zahl Pi (π) bis zur allerletzten Nachkommastelle berechnen. Warum ist das in der Informatik kein gültiger Algorithmus?", options: [
+                        { text: "Endlichkeit", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Eindeutigkeit", correct: false },
                         { text: "Ausführbarkeit", correct: false }
                     ]},
-                    { q: "Ein Code besagt: 'Gieße immer weiter Wasser ins Glas.' Welche Regel bricht das?", options: [
-                        { text: "Endlichkeit (Das Glas läuft ewig über)", correct: true },
+                    { q: "Eine Schleife lautet: 'Solange 1 + 1 = 2 ist, klatsche in die Hände.' Was ist das Problem?", options: [
+                        { text: "Endlichkeit (Die Bedingung ist immer wahr, er klatscht ewig)", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Ausführbarkeit", correct: false },
                         { text: "Eindeutigkeit", correct: false }
                     ]},
-                    { q: "'Laufe geradeaus, bis du das Ende des Universums erreichst'. Welche Regel bricht das am ehesten?", options: [
-                        { text: "Endlichkeit (Das Universum hat kein erreichbares Ende)", correct: true },
+                    { q: "'Gehe solange vorwärts, bis du eine Wand berührst.' (Der Roboter steht jedoch in einer grenzenlosen, endlosen Wüste). Welche Regel wird hier zum Verhängnis?", options: [
+                        { text: "Endlichkeit", correct: true },
                         { text: "Reihenfolge", correct: false },
                         { text: "Eindeutigkeit", correct: false },
-                        { text: "Sprache", correct: false }
+                        { text: "Ausführbarkeit", correct: false }
                     ]}
                 ]}
                 onComplete={onComplete}
@@ -759,44 +818,84 @@
                         <li><b>4. Endlich:</b> Es muss ein Ziel/Ende geben.</li>
                     </ul>
                 </DialogBox>
-                <Button3D color="yellow" onClick={onComplete}>Bereit für den Abschlusstest!</Button3D>
+                <ReadTimerButton color="yellow" onClick={onComplete} duration={12}>Bereit für den Abschlusstest!</ReadTimerButton>
             </div>
         );
         const L8_2 = ({ onComplete }) => (
             <MCLevel 
-                title="Regel-Mixer" icon="fa-blender" color="blue"
-                text="Befehl an den Computer: 'Fühle Mitleid mit der kaputten Maus.' Welcher Regel-Verstoß liegt hier vor?"
+                title="Der ungenaue Künstler" icon="fa-palette" color="blue"
+                text="Ein Mal-Roboter bekommt den Code: '1. Nimm einen Pinsel. 2. Male ein schönes Bild. 3. Lege den Pinsel weg.' Er piepst und macht nichts. Welche Regel bricht Schritt 2?"
                 options={[
-                    { text: "Ausführbarkeit. Computer haben keine Gefühle.", correct: true },
-                    { text: "Endlichkeit. Er würde ewig fühlen.", correct: false, msg: "Falsch! Er kann es ja nicht einmal anfangen." },
-                    { text: "Reihenfolge. Das Mitleid kommt zu spät.", correct: false, msg: "Hier gibt es keine Reihenfolge, nur einen Satz." },
-                    { text: "Eindeutigkeit. Mitleid ist sehr eindeutig.", correct: false, msg: "Daran scheitert es nicht primär." }
+                    { text: "Eindeutigkeit", correct: true },
+                    { text: "Ausführbarkeit", correct: false },
+                    { text: "Reihenfolge", correct: false },
+                    { text: "Endlichkeit", correct: false }
                 ]}
                 onComplete={onComplete}
             />
         );
         const L8_3 = ({ onComplete }) => (
             <MCBossGauntlet
-                title="Boss: Die Große Klausur" icon="fa-graduation-cap" colorClass="bg-purple-100 border-purple-300 text-purple-900" textClass="text-purple-600"
+                title="Boss: Algorithmen-Prüfer" icon="fa-list-check" colorClass="bg-purple-100 border-purple-300 text-purple-900" textClass="text-purple-600"
                 questions={[
-                    { q: "Was ist die Definition eines Algorithmus?", options: [
-                        { text: "Eine genaue Abfolge von Anweisungen zur Lösung eines Problems.", correct: true },
-                        { text: "Ein Fehler im Programmcode.", correct: false },
-                        { text: "Ein Bauteil, das den Computer kühlt.", correct: false },
-                        { text: "Eine Computersprache wie Englisch.", correct: false }
-                    ]},
-                    { q: "Welche der folgenden Antworten ist KEINE der 4 goldenen Regeln?", options: [
-                        { text: "Er muss auf Englisch geschrieben sein.", correct: true },
-                        { text: "Er muss eindeutig sein.", correct: false },
-                        { text: "Er muss endlich sein.", correct: false },
-                        { text: "Er muss ausführbar sein.", correct: false }
-                    ]},
-                    { q: "Ein Roboter soll fliegen, hat aber keine Flügel. Welche Regel bricht dieser Algorithmus?", options: [
-                        { text: "Ausführbarkeit", correct: true },
-                        { text: "Reihenfolge", correct: false },
-                        { text: "Endlichkeit", correct: false },
-                        { text: "Eindeutigkeit", correct: false }
-                    ]}
+                    { 
+                        q: (
+                            <div>
+                                <span className="block mb-3 text-purple-800 text-base">Runde 1: Welche Regel bricht dieser Code?</span>
+                                <div className="bg-white p-4 rounded-xl border-2 border-gray-400 font-mono text-gray-800 text-sm shadow-sm leading-relaxed relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-2 h-full bg-red-200 border-r border-gray-300"></div>
+                                    <span className="pl-4 block">1. Nimm den Eimer.</span>
+                                    <span className="pl-4 block">2. Schütte 1 Liter Wasser hinein.</span>
+                                    <span className="pl-4 block">3. Wiederhole Schritt 2.</span>
+                                </div>
+                            </div>
+                        ), 
+                        options: [
+                            { text: "Endlichkeit", correct: true },
+                            { text: "Ausführbarkeit", correct: false },
+                            { text: "Reihenfolge", correct: false },
+                            { text: "Eindeutigkeit", correct: false }
+                        ]
+                    },
+                    { 
+                        q: (
+                            <div>
+                                <span className="block mb-3 text-purple-800 text-base">Runde 2: Welche Regel ist hier gebrochen?</span>
+                                <div className="bg-white p-4 rounded-xl border-2 border-gray-400 font-mono text-gray-800 text-sm shadow-sm leading-relaxed relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-2 h-full bg-red-200 border-r border-gray-300"></div>
+                                    <span className="pl-4 block">1. Klebe Briefmarke auf Umschlag.</span>
+                                    <span className="pl-4 block">2. Schreibe Text aufs Papier.</span>
+                                    <span className="pl-4 block">3. Wirf Brief in Kasten.</span>
+                                    <span className="pl-4 block">4. Stecke Papier in Umschlag.</span>
+                                </div>
+                            </div>
+                        ), 
+                        options: [
+                            { text: "Reihenfolge", correct: true },
+                            { text: "Eindeutigkeit", correct: false },
+                            { text: "Endlichkeit", correct: false },
+                            { text: "Ausführbarkeit", correct: false }
+                        ]
+                    },
+                    { 
+                        q: (
+                            <div>
+                                <span className="block mb-3 text-purple-800 text-base">Runde 3: Algorithmus für deinen Computer. Welche Regel bricht Schritt 3?</span>
+                                <div className="bg-white p-4 rounded-xl border-2 border-gray-400 font-mono text-gray-800 text-sm shadow-sm leading-relaxed relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-2 h-full bg-red-200 border-r border-gray-300"></div>
+                                    <span className="pl-4 block">1. Schalte dich ein.</span>
+                                    <span className="pl-4 block">2. Drucke das Dokument.</span>
+                                    <span className="pl-4 block">3. Fliege zum Lehrer und gib ihm das Blatt.</span>
+                                </div>
+                            </div>
+                        ), 
+                        options: [
+                            { text: "Ausführbarkeit", correct: true },
+                            { text: "Reihenfolge", correct: false },
+                            { text: "Eindeutigkeit", correct: false },
+                            { text: "Endlichkeit", correct: false }
+                        ]
+                    }
                 ]}
                 onComplete={onComplete}
             />
@@ -977,14 +1076,16 @@
                 return false;
             };
             const isCompleted = (lvlId) => {
-                const [w1, l1] = lvlId.split('-').map(Number);
-                const [w2, l2] = maxUnlocked.split('-').map(Number);
+                const [w1, l1] = splitLvl(lvlId);
+                const [w2, l2] = splitLvl(maxUnlocked);
                 if (w1 < w2) return true;
                 if (w1 === w2 && l1 < l2) return true;
                 return false;
             };
+            const splitLvl = (l) => l.split('-').map(Number);
+            
             const getNextLvl = (currId) => {
-                let [w, l] = currId.split('-').map(Number);
+                let [w, l] = splitLvl(currId);
                 if(w === 9 && l === 1) return 'win'; 
                 if(l < 3) return `${w}-${l+1}`;
                 return `${w+1}-1`;
@@ -993,14 +1094,14 @@
                 const nextId = getNextLvl(activeLevelId);
                 if (nextId === 'win') { setView('win'); } 
                 else {
-                    const [nextW, nextL] = nextId.split('-').map(Number);
+                    const [nextW, nextL] = splitLvl(nextId);
                     if (!isUnlocked(nextId)) setMaxUnlocked(nextId);
                     if (nextW > activeWorldId) { setView('overview'); } else { setView('world'); }
                 }
             };
             const handleCheat = () => { if(cheatPw === 'Sonnenschein') { setMaxUnlocked('9-1'); setShowCheatModal(false); setCheatPw(''); } };
 
-            const [maxW, maxL] = maxUnlocked.split('-').map(Number);
+            const [maxW, maxL] = splitLvl(maxUnlocked);
             const totalLevelsCompleted = ((maxW - 1) * 3) + (maxL - 1);
             const xp = totalLevelsCompleted * 10;
 
