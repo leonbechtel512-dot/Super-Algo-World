@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Super Algo World 3D - Hard Mode</title>
+    <title>Super Algo World 3D - Darstellung Edition</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -73,6 +73,7 @@
                 gray: "bg-gray-400 hover:bg-gray-300 text-white",
                 orange: "bg-orange-500 hover:bg-orange-400 text-white",
                 black: "bg-gray-900 hover:bg-gray-800 text-cyan-400 border-2 border-cyan-500",
+                teal: "bg-teal-500 hover:bg-teal-400 text-white"
             };
             return (
                 <button onClick={onClick} disabled={disabled} className={`btn-3d w-full py-4 font-bold text-xl rounded-2xl ${colors[color]} ${disabled ? 'opacity-50 cursor-not-allowed transform-none shadow-none' : ''} ${className}`}>
@@ -131,11 +132,7 @@
             const isWaiting = timeLeft > 0;
             
             return (
-                <Button3D 
-                    color={isWaiting ? "gray" : color} 
-                    onClick={onClick} 
-                    disabled={isWaiting} 
-                >
+                <Button3D color={isWaiting ? "gray" : color} onClick={onClick} disabled={isWaiting}>
                     {isWaiting ? (
                         <span className="flex justify-center items-center gap-2 text-gray-100">
                             <i className="fa-solid fa-hourglass-half animate-spin"></i> Bitte lesen... ({timeLeft}s)
@@ -196,7 +193,7 @@
             const [stage, setStage] = useState(0);
             const [lives, setLives] = useState(3);
             const [opts, setOpts] = useState(() => shuffleArray(questions[0].options));
-            const [status, setStatus] = useState('playing'); // playing, gameover, won
+            const [status, setStatus] = useState('playing');
             const [msg, setMsg] = useState('');
             const [shake, setShake] = useState(false);
             const [selectedId, setSelectedId] = useState(null);
@@ -220,25 +217,20 @@
                         setStatus('won');
                     }
                 } else {
-                    handleFail('Falsch!');
-                }
-            };
-
-            const handleFail = async (failureMessage) => {
-                setIsLocked(true);
-                setShake(true); setTimeout(() => setShake(false), 300);
-                setMsg(failureMessage);
-                await sleep(1200);
-                
-                if (lives > 1) {
-                    setLives(l => l - 1);
-                    setMsg('Du verlierst ein Leben!');
-                    setOpts(shuffleArray([...opts]));
-                    setSelectedId(null);
-                    setIsLocked(false);
-                } else {
-                    setLives(0);
-                    setStatus('gameover');
+                    setShake(true); setTimeout(() => setShake(false), 300);
+                    setMsg('Falsch!');
+                    await sleep(1200);
+                    
+                    if (lives > 1) {
+                        setLives(l => l - 1);
+                        setMsg('Du verlierst ein Leben!');
+                        setOpts(shuffleArray([...opts]));
+                        setSelectedId(null);
+                        setIsLocked(false);
+                    } else {
+                        setLives(0);
+                        setStatus('gameover');
+                    }
                 }
             };
 
@@ -302,8 +294,246 @@
                             })}
                         </div>
                     </div>
-
                     {msg && <p className={`font-black text-xl ${msg==='Richtig!' ? 'text-green-500' : 'text-red-500'}`}>{msg}</p>}
+                </div>
+            );
+        };
+
+        // --- DRAG & DROP BOSS KOMPONENTE (NEU!) ---
+        const DnDBossGauntlet = ({ title, icon, colorClass, textClass, tasks, onComplete }) => {
+            const [stage, setStage] = useState(0);
+            const [lives, setLives] = useState(3);
+            const [slots, setSlots] = useState({}); // Map of slotIndex -> blockId
+            const [selectedId, setSelectedId] = useState(null);
+            const [msg, setMsg] = useState('');
+            const [shake, setShake] = useState(false);
+            const [status, setStatus] = useState('playing'); // playing, won, gameover
+
+            const task = tasks[stage];
+
+            const handleBlockClick = (bId) => {
+                if (selectedId === bId) setSelectedId(null);
+                else setSelectedId(bId);
+            };
+
+            const handleSlotClick = (slotIdx) => {
+                if (selectedId) {
+                    setSlots({...slots, [slotIdx]: selectedId});
+                    setSelectedId(null);
+                } else if (slots[slotIdx]) {
+                    const newSlots = {...slots};
+                    delete newSlots[slotIdx];
+                    setSlots(newSlots);
+                }
+            };
+
+            const checkSolution = async () => {
+                let correct = true;
+                if (Object.keys(slots).length !== task.solution.length) correct = false;
+                for (let i = 0; i < task.solution.length; i++) {
+                    if (slots[i] !== task.solution[i]) correct = false;
+                }
+
+                if (correct) {
+                    setMsg('Richtig!');
+                    await sleep(1000);
+                    if (stage < tasks.length - 1) {
+                        setStage(s => s + 1);
+                        setSlots({});
+                        setMsg('');
+                        setSelectedId(null);
+                    } else {
+                        setStatus('won');
+                    }
+                } else {
+                    setShake(true); setTimeout(() => setShake(false), 300);
+                    setMsg('Da ist noch ein Fehler!');
+                    await sleep(1200);
+                    if (lives > 1) {
+                        setLives(l => l - 1);
+                        setMsg('Du verlierst ein Leben!');
+                        setSlots({}); // Hier werden die gesetzten Bausteine resettet
+                        setSelectedId(null);
+                    } else {
+                        setStatus('gameover');
+                    }
+                }
+            };
+
+            const restart = () => {
+                setLives(3); setStage(0); setStatus('playing'); setMsg('');
+                setSlots({}); setSelectedId(null);
+            };
+
+            if (status === 'won') {
+                return (
+                    <div className="text-center animate-pop-in mt-6">
+                        <i className={`fa-solid fa-trophy text-7xl ${textClass} mb-4 animate-bounce`}></i>
+                        <h2 className="text-3xl font-black mb-4">Meisterprüfung bestanden!</h2>
+                        <p className="text-gray-600 font-bold mb-6">Du hast alle 8 Diagramme perfekt zusammengebaut!</p>
+                        <Button3D color="purple" onClick={onComplete}>Weiter 🚀</Button3D>
+                    </div>
+                );
+            }
+
+            if (status === 'gameover') {
+                return (
+                    <div className="text-center animate-pop-in bg-red-100 p-8 rounded-3xl border-4 border-red-500">
+                        <i className="fa-solid fa-skull-crossbones text-7xl text-red-500 mb-4 animate-float"></i>
+                        <h2 className="text-3xl font-black mb-4 text-red-700">GAME OVER</h2>
+                        <p className="text-red-900 font-bold mb-6">Du hast alle 3 Leben verloren.</p>
+                        <Button3D color="red" onClick={restart}>Erneut Versuchen</Button3D>
+                    </div>
+                );
+            }
+
+            // Rendert einen einzelnen Slot
+            const Slot = ({ idx, shape }) => {
+                const blockId = slots[idx];
+                const block = task.blocks.find(b => b.id === blockId);
+                let baseClasses = "flex items-center justify-center font-bold text-sm min-h-[50px] transition-all cursor-pointer ";
+                
+                if (block) {
+                    baseClasses += "bg-blue-100 border-4 border-blue-500 text-blue-900 shadow-md p-3 ";
+                } else {
+                    baseClasses += "bg-white border-4 border-dashed border-gray-400 text-gray-400 p-3 ";
+                    if (selectedId) baseClasses += "hover:bg-yellow-100 hover:border-yellow-400 ";
+                }
+
+                if (shape === 'oval') baseClasses += "rounded-full w-[160px] mx-auto";
+                else if (shape === 'rect') baseClasses += "rounded-xl w-[200px] mx-auto";
+                else if (shape === 'diamond') baseClasses += "[clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)] bg-orange-50 border-orange-400 w-[200px] h-[100px] mx-auto " + (block ? "bg-orange-200 border-solid" : "");
+                else baseClasses += "rounded-md w-full h-full"; // Default for structograms
+
+                return (
+                    <div onClick={() => handleSlotClick(idx)} className={baseClasses}>
+                        {block ? block.text : (selectedId ? 'Hier tippen' : '...')}
+                    </div>
+                );
+            };
+
+            const Arrow = () => <div className="text-gray-400 text-xl my-1 flex justify-center w-full"><i className="fa-solid fa-arrow-down"></i></div>;
+
+            return (
+                <div className={`text-center animate-pop-in ${shake ? 'animate-shake' : ''}`}>
+                    <div className="flex justify-between items-center mb-2 px-4">
+                        <div className="flex gap-1">
+                            {[1, 2, 3].map(i => <i key={i} className={`fa-solid fa-heart text-2xl ${i <= lives ? 'text-red-500 animate-pulse' : 'text-gray-300'}`}></i>)}
+                        </div>
+                        <div className="font-black text-gray-500 bg-gray-200 px-3 py-1 rounded-full text-sm">Prüfung {stage + 1} / {tasks.length}</div>
+                    </div>
+
+                    <h2 className={`text-2xl font-black mb-4 ${textClass}`}>{title}: {task.title}</h2>
+                    <p className="bg-gray-100 p-3 rounded-2xl border-4 border-gray-300 font-bold mb-4 text-sm text-gray-700 shadow-inner">
+                        Wähle einen Block unten aus und tippe dann auf ein leeres Feld im Diagramm!
+                    </p>
+
+                    {/* BLÖCKE ZUM AUSWÄHLEN */}
+                    <div className="flex flex-wrap gap-2 justify-center mb-6 min-h-[80px] p-4 bg-gray-200 rounded-xl border-4 border-gray-300 shadow-inner">
+                        {task.blocks.map(b => {
+                            const isPlaced = Object.values(slots).includes(b.id);
+                            if (isPlaced) return null;
+                            const isSelected = selectedId === b.id;
+                            return (
+                                <button
+                                    key={b.id}
+                                    onClick={() => handleBlockClick(b.id)}
+                                    className={`px-4 py-2 rounded-xl font-bold shadow-sm transition-all border-4 text-sm
+                                        ${isSelected ? 'bg-yellow-300 border-yellow-500 text-yellow-900 scale-110' : 'bg-white border-gray-400 text-gray-700 hover:border-blue-400'}`}
+                                >
+                                    {b.text}
+                                </button>
+                            )
+                        })}
+                        {Object.values(slots).length === task.solution.length && <span className="text-green-600 font-bold text-lg flex items-center w-full justify-center"><i className="fa-solid fa-check-circle mr-2"></i> Alle verbaut!</span>}
+                    </div>
+
+                    {/* DIAGRAMM ZEICHNEN */}
+                    <div className="mb-6 flex justify-center bg-white p-6 rounded-2xl border-4 border-gray-200 shadow-sm min-h-[300px] items-center">
+                        
+                        {/* FLUSSDIAGRAMM 3 */}
+                        {task.layout === 'flow-3' && (
+                            <div className="flex flex-col items-center">
+                                <Slot idx={0} shape="oval" /> <Arrow /> <Slot idx={1} shape="rect" /> <Arrow /> <Slot idx={2} shape="oval" />
+                            </div>
+                        )}
+
+                        {/* FLUSSDIAGRAMM 4 */}
+                        {task.layout === 'flow-4' && (
+                            <div className="flex flex-col items-center">
+                                <Slot idx={0} shape="oval" /> <Arrow /> <Slot idx={1} shape="rect" /> <Arrow /> <Slot idx={2} shape="rect" /> <Arrow /> <Slot idx={3} shape="oval" />
+                            </div>
+                        )}
+
+                        {/* FLUSSDIAGRAMM BRANCH */}
+                        {task.layout === 'flow-branch' && (
+                            <div className="flex flex-col items-center w-full max-w-md">
+                                <Slot idx={0} shape="diamond" />
+                                <div className="flex w-full justify-center relative my-2">
+                                    <div className="w-[120px] border-t-4 border-l-4 border-gray-400 h-6 relative rounded-tl-xl"><span className="absolute -top-3 left-4 text-xs font-bold bg-white px-1 text-green-600">JA</span></div>
+                                    <div className="w-[120px] border-t-4 border-r-4 border-gray-400 h-6 relative rounded-tr-xl"><span className="absolute -top-3 right-4 text-xs font-bold bg-white px-1 text-red-600">NEIN</span></div>
+                                </div>
+                                <div className="flex w-full gap-4 justify-center">
+                                    <div className="w-[140px]"><Slot idx={1} shape="rect" /></div>
+                                    <div className="w-[140px]"><Slot idx={2} shape="rect" /></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* STRUKTOGRAMM 2 */}
+                        {task.layout === 'struct-2' && (
+                            <div className="flex flex-col w-[250px] border-4 border-black bg-gray-50">
+                                <div className="border-b-4 border-black h-[60px]"><Slot idx={0} shape="none" /></div>
+                                <div className="h-[60px]"><Slot idx={1} shape="none" /></div>
+                            </div>
+                        )}
+
+                        {/* STRUKTOGRAMM 3 */}
+                        {task.layout === 'struct-3' && (
+                            <div className="flex flex-col w-[250px] border-4 border-black bg-gray-50">
+                                <div className="border-b-4 border-black h-[60px]"><Slot idx={0} shape="none" /></div>
+                                <div className="border-b-4 border-black h-[60px]"><Slot idx={1} shape="none" /></div>
+                                <div className="h-[60px]"><Slot idx={2} shape="none" /></div>
+                            </div>
+                        )}
+
+                        {/* STRUKTOGRAMM IF */}
+                        {task.layout === 'struct-if' && (
+                            <div className="flex flex-col w-full max-w-md border-4 border-black bg-gray-50">
+                                <div className="relative border-b-4 border-black h-[80px] flex items-center justify-center bg-gray-200">
+                                    <svg className="absolute inset-0 w-full h-full pointer-events-none"><line x1="0" y1="0" x2="50%" y2="100%" stroke="black" strokeWidth="4"/><line x1="100%" y1="0" x2="50%" y2="100%" stroke="black" strokeWidth="4"/></svg>
+                                    <div className="z-10 w-[60%] h-[45px]"><Slot idx={0} shape="none" /></div>
+                                    <span className="absolute bottom-1 left-2 text-xs font-black text-green-700 z-10">JA</span>
+                                    <span className="absolute bottom-1 right-2 text-xs font-black text-red-700 z-10">NEIN</span>
+                                </div>
+                                <div className="flex w-full h-[70px]">
+                                    <div className="w-1/2 border-r-4 border-black"><Slot idx={1} shape="none" /></div>
+                                    <div className="w-1/2"><Slot idx={2} shape="none" /></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* STRUKTOGRAMM LOOP */}
+                        {task.layout === 'struct-loop' && (
+                            <div className="flex flex-col w-[300px] border-4 border-black bg-gray-50">
+                                <div className="border-b-4 border-black h-[60px] bg-yellow-100 p-1 pl-8 relative">
+                                    <span className="absolute left-2 top-4 font-black text-yellow-600"><i className="fa-solid fa-rotate-right"></i></span>
+                                    <Slot idx={0} shape="none" />
+                                </div>
+                                <div className="flex h-[70px]">
+                                    <div className="w-8 border-r-4 border-black bg-yellow-100"></div>
+                                    <div className="flex-1"><Slot idx={1} shape="none" /></div>
+                                </div>
+                            </div>
+                        )}
+
+                    </div>
+
+                    <Button3D color="green" onClick={checkSolution} disabled={Object.keys(slots).length !== task.solution.length}>
+                        DIAGRAMM PRÜFEN
+                    </Button3D>
+                    
+                    {msg && <p className={`font-black text-xl mt-4 ${msg==='Richtig!' ? 'text-green-500' : 'text-red-500'}`}>{msg}</p>}
                 </div>
             );
         };
@@ -319,7 +549,7 @@
                     <p>Ein <strong>Algorithmus</strong> ist eine <strong>Abfolge von Anweisungen</strong>, mit der man ein Problem löst.</p>
                     <p>Das ist wie ein Kochrezept, eine Bastelanleitung für Lego oder der Weg zur Schule. Jeder Schritt ist eine kleine, klare Anweisung.</p>
                 </DialogBox>
-                <ReadTimerButton color="green" onClick={onComplete} duration={10}>Anweisungen verstehen! 👍</ReadTimerButton>
+                <ReadTimerButton color="green" onClick={onComplete}>Anweisungen verstehen! 👍</ReadTimerButton>
             </div>
         );
         const L1_2 = ({ onComplete }) => (
@@ -362,7 +592,7 @@
             />
         );
 
-        // WELT 2: ROBOTER MISSION (PRAXIS)
+        // WELT 2: ROBOTER MISSION
         const L2_1 = ({ onComplete }) => (
             <div className="animate-pop-in">
                 <DialogBox title="Roboter steuern" icon="fa-robot" color="orange">
@@ -546,362 +776,321 @@
         const L3_1 = ({ onComplete }) => (
             <div className="animate-pop-in">
                 <DialogBox title="Die 4 goldenen Regeln" icon="fa-gavel" color="teal">
-                    <p><b>Algo mahnt:</b> Ein dummer Roboter kann nichts erfinden oder mitdenken. Damit ein Algorithmus von ihm verstanden wird, muss er 4 Regeln einhalten:</p>
+                    <p><b>Algo mahnt:</b> Ein dummer Roboter kann nichts erfinden oder mitdenken. Damit er uns versteht, müssen Algorithmen strenge Regeln einhalten:</p>
                     <ul className="list-disc list-inside space-y-2 font-bold text-teal-900 bg-white p-4 rounded-xl border border-teal-200 text-sm md:text-base shadow-inner">
-                        <li><b>1. Eindeutig:</b> Der Befehl hat nur exakt EINE Bedeutung.</li>
-                        <li><b>2. Ausführbar:</b> Der Roboter ist körperlich in der Lage dazu.</li>
-                        <li><b>3. Reihenfolge:</b> Die Schritte machen chronologisch Sinn.</li>
-                        <li><b>4. Endlich:</b> Der Code läuft nicht für immer weiter.</li>
+                        <li><b>1. Eindeutig</b></li>
+                        <li><b>2. Ausführbar</b></li>
+                        <li><b>3. Reihenfolge</b></li>
+                        <li><b>4. Endlich</b></li>
                     </ul>
+                    <p>Lass uns diese Regeln nun genauer anschauen!</p>
                 </DialogBox>
-                <ReadTimerButton color="teal" onClick={onComplete} duration={12}>Regeln verstanden!</ReadTimerButton>
+                <ReadTimerButton color="teal" onClick={onComplete}>Regeln verstanden!</ReadTimerButton>
             </div>
         );
         const L3_2 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Regel 1 & 2" icon="fa-bullseye" color="green">
+                    <p><b>1. Eindeutig:</b> Der Befehl hat nur exakt EINE Bedeutung. Es gibt absolut keinen Spielraum für eigene Ideen.</p>
+                    <p className="bg-white p-2 border-2 border-green-200 rounded-xl text-sm font-bold">❌ "Gehe ein Stück vorwärts."<br/>✅ "Gehe 1 Meter vorwärts."</p>
+                    <p className="mt-4"><b>2. Ausführbar:</b> Der Roboter ist körperlich oder technisch überhaupt in der Lage dazu.</p>
+                    <p className="bg-white p-2 border-2 border-green-200 rounded-xl text-sm font-bold text-gray-700">Beispiel: Ein Toaster kann kein Auto fahren.</p>
+                </DialogBox>
+                <ReadTimerButton color="green" onClick={onComplete}>Alles klar!</ReadTimerButton>
+            </div>
+        );
+        const L3_3 = ({ onComplete }) => (
+            <div className="animate-pop-in">
+                <DialogBox title="Regel 3 & 4" icon="fa-list-ol" color="blue">
+                    <p><b>3. Reihenfolge:</b> Die Schritte machen chronologisch Sinn. Ein Programm liest Code immer von oben nach unten.</p>
+                    <p className="bg-white p-2 border-2 border-blue-200 rounded-xl text-sm font-bold">Zuerst Schuhe, dann Socken anziehen? Das klappt nicht!</p>
+                    <p className="mt-4"><b>4. Endlich:</b> Der Code läuft nicht für immer weiter. Er muss ein Ziel oder Ende haben.</p>
+                    <p className="bg-white p-2 border-2 border-blue-200 rounded-xl text-sm font-bold text-red-600">Gefahr: Eine "Endlosschleife" lässt den PC abstürzen!</p>
+                </DialogBox>
+                <ReadTimerButton color="blue" onClick={onComplete}>Verstanden!</ReadTimerButton>
+            </div>
+        );
+        const L3_4 = ({ onComplete }) => (
             <MCLevel 
-                title="Mensch vs. Maschine" icon="fa-brain" color="blue"
+                title="Mensch vs. Maschine" icon="fa-brain" color="orange"
                 text="Warum müssen wir beim Programmieren von Computern so streng auf diese 4 Regeln achten, während wir mit Menschen normal reden können?"
                 options={[
                     { text: "Ein Mensch versteht auch ungenaue Dinge. Ein Computer braucht exakte Details.", correct: true },
-                    { text: "Computer sind intelligenter und entscheiden selbst, was gemeint ist.", correct: false, msg: "Computer denken NICHT selbst mit!" },
-                    { text: "Roboter haben keine Ohren.", correct: false, msg: "Es geht um die Logik, nicht um Ohren." },
-                    { text: "Algorithmen sind nur für Maschinen gemacht.", correct: false, msg: "Auch Kochrezepte sind Algorithmen." }
+                    { text: "Computer sind intelligenter und entscheiden selbst, was gemeint ist.", correct: false },
+                    { text: "Roboter haben keine Ohren.", correct: false },
+                    { text: "Algorithmen sind nur für Maschinen gemacht.", correct: false }
                 ]}
                 onComplete={onComplete}
             />
         );
-        const L3_3 = ({ onComplete }) => (
+        const L3_5 = ({ onComplete }) => (
             <MCBossGauntlet
-                title="Boss: Der Bäcker" icon="fa-cake-candles" colorClass="bg-blue-100 border-blue-300 text-blue-900" textClass="text-blue-600"
+                title="Boss: Der Regel-Meister" icon="fa-gavel" colorClass="bg-red-100 border-red-300 text-red-900" textClass="text-red-600"
                 questions={[
                     { q: "Ein Kochrezept sagt: 'Backe es ca. eine Stunde'. Welche Regel wird gebrochen?", options: [
-                        { text: "Eindeutigkeit", correct: true },
-                        { text: "Reihenfolge", correct: false },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Endlichkeit", correct: false }
+                        { text: "Eindeutigkeit", correct: true }, { text: "Reihenfolge", correct: false }, { text: "Ausführbarkeit", correct: false }, { text: "Endlichkeit", correct: false }
+                    ]},
+                    { q: "Befehl an einen Hund: 'Lies das Mathe-Buch'. Welche Regel wird gebrochen?", options: [
+                        { text: "Ausführbarkeit", correct: true }, { text: "Eindeutigkeit", correct: false }, { text: "Endlichkeit", correct: false }, { text: "Reihenfolge", correct: false }
                     ]},
                     { q: "Im Rezept steht: 'Schütte das Mehl in die Schüssel. Öffne danach die Mehltüte'. Welche Regel ist gebrochen?", options: [
-                        { text: "Reihenfolge", correct: true },
-                        { text: "Eindeutigkeit", correct: false },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Endlichkeit", correct: false }
+                        { text: "Reihenfolge", correct: true }, { text: "Eindeutigkeit", correct: false }, { text: "Ausführbarkeit", correct: false }, { text: "Endlichkeit", correct: false }
                     ]},
                     { q: "Ein neuer Roboter bekommt den Code: 'Rühre den Teig für immer weiter'. Welche Regel ist gebrochen?", options: [
-                        { text: "Endlichkeit", correct: true },
-                        { text: "Eindeutigkeit", correct: false },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Reihenfolge", correct: false }
+                        { text: "Endlichkeit", correct: true }, { text: "Eindeutigkeit", correct: false }, { text: "Ausführbarkeit", correct: false }, { text: "Reihenfolge", correct: false }
+                    ]},
+                    { q: "Robbie bekommt den Befehl: 'Wenn du ein Hindernis siehst, weiche geschickt aus.' Welches Problem hat dieser Code?", options: [
+                        { text: "Eindeutigkeit", correct: true }, { text: "Ausführbarkeit", correct: false }, { text: "Reihenfolge", correct: false }, { text: "Endlichkeit", correct: false }
+                    ]},
+                    { q: "Ein Smart-Home-System bekommt den Code: 'Koche das Abendessen auf dem Herd', hat aber keine physischen Roboterarme. Regel?", options: [
+                        { text: "Ausführbarkeit", correct: true }, { text: "Reihenfolge", correct: false }, { text: "Endlichkeit", correct: false }, { text: "Eindeutigkeit", correct: false }
+                    ]},
+                    { q: "'1. Sende die E-Mail ab. 2. Tippe die Nachricht.' Welcher Fehler ist das?", options: [
+                        { text: "Reihenfolge", correct: true }, { text: "Ausführbarkeit", correct: false }, { text: "Endlichkeit", correct: false }, { text: "Eindeutigkeit", correct: false }
                     ]}
                 ]}
                 onComplete={onComplete}
             />
         );
 
-        // WELT 4: REGEL 1 (EINDEUTIGKEIT)
+        // WELT 4: FLUSSDIAGRAMME (NEU)
         const L4_1 = ({ onComplete }) => (
             <div className="animate-pop-in">
-                <DialogBox title="Regel 1: Eindeutig" icon="fa-bullseye" color="green">
-                    <p><b>Algo erklärt:</b> "In dieser Welt überprüfen wir die Regel <strong>Eindeutigkeit</strong>."</p>
-                    <p>Ein Befehl ist eindeutig, wenn es <b>absolut keinen Spielraum</b> für eigene Ideen gibt.</p>
-                    <p className="bg-white p-2 border-2 border-green-200 rounded-xl mt-2 text-sm font-bold">
-                        ❌ Falsch: "Gehe ein Stück vorwärts."<br/>
-                        ✅ Richtig: "Gehe 1 Meter vorwärts."
-                    </p>
+                <DialogBox title="Das Flussdiagramm" icon="fa-project-diagram" color="blue">
+                    <p>Texte sind oft schwer zu lesen. Um Algorithmen übersichtlich darzustellen, zeichnet man sie oft als <strong>Flussdiagramm</strong>!</p>
+                    
+                    <div className="flex flex-col md:flex-row gap-6 mt-4 items-center">
+                        <div className="flex-1">
+                            <p>Dabei nutzt man verschiedene geometrische Formen, die mit Pfeilen verbunden sind:</p>
+                            <ul className="list-none space-y-3 font-bold text-sm bg-white p-4 rounded-xl border border-blue-200 mt-4 shadow-sm">
+                                <li className="flex items-center gap-3"><span className="inline-block w-12 h-6 rounded-full bg-blue-100 border-2 border-blue-500"></span> = <b>Ovale</b> für Start & Ende</li>
+                                <li className="flex items-center gap-3"><span className="inline-block w-12 h-6 rounded-md bg-green-100 border-2 border-green-500"></span> = <b>Rechtecke</b> für Anweisungen</li>
+                                <li className="flex items-center gap-3"><span className="inline-block w-12 h-6 bg-orange-100 border-2 border-orange-500" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}></span> = <b>Rauten</b> für Bedingungen</li>
+                            </ul>
+                        </div>
+                        
+                        {/* Abstraktes Beispiel-Diagramm rechts */}
+                        <div className="flex flex-col items-center gap-1 bg-gray-50 p-4 rounded-xl border-4 border-gray-200 shadow-inner w-full md:w-auto">
+                            <div className="w-20 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">START</div>
+                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
+                            <div className="w-20 h-8 rounded-md bg-green-100 border-2 border-green-500 flex items-center justify-center text-[10px] font-bold text-green-900 shadow-sm">Aktion</div>
+                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
+                            <div className="w-24 h-12 bg-orange-100 border-2 border-orange-500 flex items-center justify-center text-[10px] font-bold text-orange-900 shadow-sm" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}>Frage?</div>
+                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
+                            <div className="w-20 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">ENDE</div>
+                        </div>
+                    </div>
                 </DialogBox>
-                <ReadTimerButton color="green" onClick={onComplete} duration={10}>Muss 100% klar sein!</ReadTimerButton>
+                <ReadTimerButton color="blue" onClick={onComplete}>Pfeilen folgen, kapiert!</ReadTimerButton>
             </div>
         );
         const L4_2 = ({ onComplete }) => (
             <MCLevel 
-                title="Der ungenaue Koch" icon="fa-spoon" color="orange"
-                text="Roboter können mit ungenauen Mengen nicht umgehen. Welcher Befehl ist für einen Roboter absolut eindeutig?"
+                title="Formen-Quiz" icon="fa-shapes" color="teal"
+                text="Welche geometrische Form nutzt man im Flussdiagramm, wenn man eine Frage stellt (eine Verzweigung / Bedingung) bei der es 'JA' oder 'NEIN' als Weg gibt?"
                 options={[
-                    { text: "'Schütte genau 5 Gramm Salz hinein.'", correct: true },
-                    { text: "'Schütte eine Prise Salz hinein.'", correct: false, msg: "Eine Prise ist bei jedem unterschiedlich groß!" },
-                    { text: "'Mache den Kuchen salzig.'", correct: false, msg: "Wie salzig? Das ist nicht eindeutig." },
-                    { text: "'Ein bisschen Salz schadet nie.'", correct: false, msg: "'Ein bisschen' versteht kein Computer." }
+                    { text: "Die Raute", correct: true },
+                    { text: "Das Rechteck", correct: false, msg: "Rechtecke sind für normale Aktionen (z.B. 'Gehe vor')." },
+                    { text: "Das Oval", correct: false, msg: "Das Oval nutzt man nur ganz oben (START) und unten (ENDE)." },
+                    { text: "Das Dreieck", correct: false, msg: "Dreiecke gibt es im normalen Flussdiagramm nicht." }
                 ]}
                 onComplete={onComplete}
             />
         );
         const L4_3 = ({ onComplete }) => (
             <MCBossGauntlet
-                title="Boss: Der Navigationstrick" icon="fa-street-view" colorClass="bg-emerald-100 border-emerald-300 text-emerald-900" textClass="text-emerald-600"
+                title="Boss: Fluss-Prüfer" icon="fa-code-branch" colorClass="bg-blue-100 border-blue-300 text-blue-900" textClass="text-blue-600"
                 questions={[
-                    { q: "Robbie bekommt den Befehl: 'Wenn du ein Hindernis siehst, weiche geschickt aus.' Welches Problem hat dieser Code?", options: [
-                        { text: "Er ist nicht eindeutig ('geschickt ausweichen' ist ungenau).", correct: true },
-                        { text: "Er ist nicht ausführbar.", correct: false },
-                        { text: "Er ist nicht in der richtigen Reihenfolge.", correct: false },
-                        { text: "Er ist nicht endlich.", correct: false }
+                    { q: "Wenn ein Pfeil von einem Kasten zurück nach oben zu einem früheren Kasten zeigt, was bedeutet das?", options: [
+                        { text: "Es ist eine Schleife (Wiederholung).", correct: true }, { text: "Das Diagramm ist falsch herum.", correct: false }, { text: "Das Programm ist zu Ende.", correct: false }, { text: "Der Roboter läuft rückwärts.", correct: false }
                     ]},
-                    { q: "Befehl: 'Fahre so lange, bis du am Ziel bist.' Warum könnte das für einen Roboter nicht eindeutig sein?", options: [
-                        { text: "Das 'Ziel' ist nicht mit exakten Koordinaten definiert.", correct: true },
-                        { text: "Roboter haben keine Augen.", correct: false },
-                        { text: "Der Roboter wird niemals ankommen.", correct: false },
-                        { text: "Fahren ist keine ausführbare Aktion.", correct: false }
+                    { q: "Ein Rechteck im Flussdiagramm hat IMMER wie viele ausgehende Pfeile (nach unten)?", options: [
+                        { text: "Genau einen (zur nächsten Aktion).", correct: true }, { text: "Zwei (für Ja und Nein).", correct: false }, { text: "Keinen.", correct: false }, { text: "Unendlich viele.", correct: false }
                     ]},
-                    { q: "Ein Algorithmus sagt: 'Male ein Bild von einem schönen Haus.' Gegen welche Regel verstößt das am meisten?", options: [
-                        { text: "Eindeutigkeit", correct: true },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Endlichkeit", correct: false },
-                        { text: "Reihenfolge", correct: false }
+                    { q: "Woran erkennst du im Flussdiagramm den genauen Ablauf, wenn du es liest?", options: [
+                        { text: "Ich folge einfach den gezeichneten Pfeilen.", correct: true }, { text: "Ich lese einfach stur von oben nach unten.", correct: false }, { text: "Ich fange beim größten Kasten an.", correct: false }, { text: "Ich lese von links nach rechts.", correct: false }
                     ]}
                 ]}
                 onComplete={onComplete}
             />
         );
 
-        // WELT 5: REGEL 2 (AUSFÜHRBARKEIT)
+        // WELT 5: STRUKTOGRAMME (NEU)
         const L5_1 = ({ onComplete }) => (
             <div className="animate-pop-in">
-                <DialogBox title="Regel 2: Ausführbar" icon="fa-wrench" color="blue">
-                    <p><b>Algo prüft:</b> "Nun überprüfen wir die Regel <strong>Ausführbarkeit</strong>."</p>
-                    <p>Ein Befehl kann noch so eindeutig sein: Wenn der Roboter oder Computer ihn körperlich oder technisch <b>nicht ausführen kann</b>, ist der Algorithmus kaputt.</p>
-                    <p className="bg-white p-2 border-2 border-blue-200 rounded-xl mt-2 text-sm font-bold text-gray-700">Beispiel: Ein Toaster kann kein Auto fahren.</p>
+                <DialogBox title="Das Struktogramm" icon="fa-layer-group" color="purple">
+                    <p>Eine andere Art, Algorithmen zu zeichnen, ist das <strong>Struktogramm (Nassi-Shneiderman-Diagramm)</strong>.</p>
+                    <p>Hier gibt es <strong>KEINE Pfeile</strong>! Die Blöcke werden einfach ineinander oder übereinander gestapelt.</p>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+                        {/* 1. Sequenz */}
+                        <div className="flex flex-col items-center">
+                            <p className="font-bold text-xs mb-2 text-purple-800 bg-purple-100 px-2 py-1 rounded-md">1. Sequenz (Ablauf)</p>
+                            <div className="flex flex-col w-full max-w-[150px] border-2 border-black text-xs font-bold text-center bg-white shadow-md">
+                                <div className="border-b-2 border-black p-1 bg-gray-100">Aufstehen</div>
+                                <div className="border-b-2 border-black p-1 bg-gray-100">Anziehen</div>
+                                <div className="p-1 bg-gray-100">Frühstücken</div>
+                            </div>
+                        </div>
+
+                        {/* 2. Bedingung */}
+                        <div className="flex flex-col items-center">
+                            <p className="font-bold text-xs mb-2 text-purple-800 bg-purple-100 px-2 py-1 rounded-md">2. Verzweigung (Wenn...)</p>
+                            <div className="flex flex-col w-full max-w-[150px] border-2 border-black text-[11px] font-bold text-center bg-white h-full shadow-md">
+                                <div className="relative border-b-2 border-black h-[40px] flex items-center justify-center bg-gray-200 overflow-hidden">
+                                    <svg className="absolute inset-0 w-full h-full pointer-events-none"><line x1="0" y1="0" x2="50%" y2="100%" stroke="black" strokeWidth="2"/><line x1="100%" y1="0" x2="50%" y2="100%" stroke="black" strokeWidth="2"/></svg>
+                                    <div className="z-10 bg-white/90 px-1 rounded shadow-sm text-[10px]">Hunger?</div>
+                                    <span className="absolute bottom-0 left-1 text-[9px] font-black text-green-700">JA</span>
+                                    <span className="absolute bottom-0 right-1 text-[9px] font-black text-red-700">NEIN</span>
+                                </div>
+                                <div className="flex flex-1">
+                                    <div className="w-1/2 border-r-2 border-black flex items-center justify-center p-1 bg-gray-50">Essen</div>
+                                    <div className="w-1/2 flex items-center justify-center p-1 text-gray-400 bg-gray-50">Nichts</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. Schleife */}
+                        <div className="flex flex-col items-center">
+                            <p className="font-bold text-xs mb-2 text-purple-800 bg-purple-100 px-2 py-1 rounded-md">3. Schleife (Umgedrehtes L)</p>
+                            <div className="flex flex-col w-full max-w-[150px] border-2 border-black text-xs font-bold text-center bg-white h-full shadow-md">
+                                <div className="border-b-2 border-black bg-yellow-100 p-1 text-left">
+                                    <i className="fa-solid fa-rotate-right mr-1 text-yellow-600"></i> 3 mal:
+                                </div>
+                                <div className="flex flex-1">
+                                    <div className="w-6 border-r-2 border-black bg-yellow-100"></div>
+                                    <div className="flex-1 flex items-center justify-center p-1 bg-gray-50">Klatschen</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </DialogBox>
-                <ReadTimerButton color="blue" onClick={onComplete} duration={10}>Muss machbar sein!</ReadTimerButton>
+                <ReadTimerButton color="purple" onClick={onComplete}>Gestapelt, ohne Pfeile!</ReadTimerButton>
             </div>
         );
         const L5_2 = ({ onComplete }) => (
             <MCLevel 
-                title="Der Wischroboter" icon="fa-broom" color="teal"
-                text="Du hast einen kleinen runden Staubsauger-Roboter, der auf dem Boden herumfährt. Welcher Befehl bricht für ihn die Regel der Ausführbarkeit?"
+                title="Der große Unterschied" icon="fa-magnifying-glass" color="orange"
+                text="Woran unterscheidet man auf den allerersten Blick ein Struktogramm von einem Flussdiagramm?"
                 options={[
-                    { text: "'Fliege zum Mond.'", correct: true },
-                    { text: "'Wisch den Boden.'", correct: false, msg: "Das kann ein Wischroboter!" },
-                    { text: "'Fahre nach links.'", correct: false, msg: "Das ist eine normale Roboter-Aktion." },
-                    { text: "'Lade deinen Akku auf.'", correct: false, msg: "Das gehört zu seinen Standardfunktionen." }
+                    { text: "Ein Struktogramm hat keine Pfeile.", correct: true },
+                    { text: "Ein Struktogramm nutzt bunte Rauten.", correct: false, msg: "Rauten gibt es nur im Flussdiagramm!" },
+                    { text: "Ein Struktogramm liest man von unten nach oben.", correct: false, msg: "Beide liest man grundsätzlich von oben nach unten." },
+                    { text: "Ein Struktogramm ist nur für Roboter lesbar.", correct: false, msg: "Struktogramme sind extra für Menschen gemacht." }
                 ]}
                 onComplete={onComplete}
             />
         );
         const L5_3 = ({ onComplete }) => (
             <MCBossGauntlet
-                title="Boss: Der Unmögliche Code" icon="fa-dog" colorClass="bg-cyan-100 border-cyan-300 text-cyan-900" textClass="text-cyan-500"
+                title="Boss: Struktur-Wissen" icon="fa-cubes-stacked" colorClass="bg-purple-100 border-purple-300 text-purple-900" textClass="text-purple-600"
                 questions={[
-                    { q: "Befehl an einen Saugroboter: 'Steige die Treppe hinauf und sauge den 1. Stock.' Warum scheitert das?", options: [
-                        { text: "Ausführbarkeit", correct: true },
-                        { text: "Eindeutigkeit", correct: false },
-                        { text: "Endlichkeit", correct: false },
-                        { text: "Reihenfolge", correct: false }
+                    { q: "Wie zeichnet man eine Verzweigung (Bedingung / WENN-DANN) in einem Struktogramm?", options: [
+                        { text: "Durch ein geteiltes Rechteck mit einem Dreieck oben (für die Frage).", correct: true }, { text: "Durch eine bunte Raute mit Pfeilen.", correct: false }, { text: "Durch einen unsichtbaren Kasten.", correct: false }, { text: "Durch einen Kreis.", correct: false }
                     ]},
-                    { q: "Ein Programm fordert den Computer auf: 'Erkenne, ob der Nutzer gerade traurig ist.' Welches logische Problem entsteht für die Maschine?", options: [
-                        { text: "Ausführbarkeit", correct: true },
-                        { text: "Eindeutigkeit", correct: false },
-                        { text: "Reihenfolge", correct: false },
-                        { text: "Endlichkeit", correct: false }
+                    { q: "Wie sieht eine Schleife (Wiederholung) im Struktogramm aus?", options: [
+                        { text: "Wie ein großes L (oder C), das die inneren Anweisungen umklammert.", correct: true }, { text: "Wie ein Pfeil, der nach oben zeigt.", correct: false }, { text: "Wie eine Raute.", correct: false }, { text: "Die gibt es im Struktogramm nicht.", correct: false }
                     ]},
-                    { q: "Ein Smart-Home-System bekommt den Code: 'Koche das Abendessen auf dem Herd', hat aber keine physischen Roboterarme. Regel?", options: [
-                        { text: "Ausführbarkeit", correct: true },
-                        { text: "Reihenfolge", correct: false },
-                        { text: "Endlichkeit", correct: false },
-                        { text: "Eindeutigkeit", correct: false }
+                    { q: "Wer hat das Struktogramm erfunden?", options: [
+                        { text: "Nassi und Shneiderman", correct: true }, { text: "Albert Einstein", correct: false }, { text: "Robbie der Roboter", correct: false }, { text: "Bill Gates", correct: false }
                     ]}
                 ]}
                 onComplete={onComplete}
             />
         );
 
-        // WELT 6: REGEL 3 (REIHENFOLGE)
+        // WELT 6: DER MEISTER-TEST (8-STAGE DRAG & DROP BOSS)
         const L6_1 = ({ onComplete }) => (
             <div className="animate-pop-in">
-                <DialogBox title="Regel 3: Reihenfolge" icon="fa-list-ol" color="blue">
-                    <p><b>Algo flüstert:</b> "Nun zur <strong>Reihenfolge</strong>."</p>
-                    <p>Ein Programm liest Code <strong>immer von oben nach unten</strong>.</p>
-                    <p>Wenn du die Reihenfolge vertauschst, entsteht ein Logik-Fehler. Stell dir vor, ein Algorithmus soll dir Socken und Schuhe anziehen. Zuerst Schuhe, dann Socken? Das klappt nicht!</p>
+                <DialogBox title="Die Praxis-Prüfung" icon="fa-wrench" color="red">
+                    <p>Du kennst nun die Theorie zu Flussdiagrammen und Struktogrammen.</p>
+                    <p>Jetzt wird es ernst! Du musst für den Boss <b>8 Diagramme</b> selbst zusammenbauen.</p>
+                    <ul className="list-disc list-inside space-y-2 font-bold text-red-900 bg-white p-4 rounded-xl border border-red-200 text-sm mt-4">
+                        <li><b>Runde 1-4:</b> Flussdiagramme bauen.</li>
+                        <li><b>Runde 5-8:</b> Struktogramme bauen.</li>
+                    </ul>
+                    <p className="mt-4 text-sm font-bold text-gray-600">Tipp: Tippe erst auf den gewünschten Block unten, und dann auf das leere gestrichelte Feld oben im Diagramm!</p>
                 </DialogBox>
-                <ReadTimerButton color="blue" onClick={onComplete} duration={10}>Reihenfolge ist heilig!</ReadTimerButton>
+                <ReadTimerButton color="red" onClick={onComplete}>Ich bin bereit zu bauen!</ReadTimerButton>
             </div>
         );
         const L6_2 = ({ onComplete }) => (
             <MCLevel 
-                title="Der Zahnputz-Bug" icon="fa-tooth" color="teal"
-                text="Bringe diesen Algorithmus in eine korrekte Reihenfolge: 1) Zahnbürste in die Hand. 2) Putzen. 3) Zahnpasta drauf."
+                title="Letzter Check" icon="fa-clipboard-check" color="yellow"
+                text="Eine letzte Frage, bevor die Prüfung startet: In welchem Diagramm findest du das OVAL für 'Start' und 'Ende'?"
                 options={[
-                    { text: "1 -> 3 -> 2", correct: true },
-                    { text: "1 -> 2 -> 3", correct: false, msg: "Falsch! Erst die Zahnpasta drauf, dann putzen." },
-                    { text: "3 -> 2 -> 1", correct: false, msg: "Du kannst nicht putzen, bevor du die Bürste hast." },
-                    { text: "2 -> 3 -> 1", correct: false, msg: "Die Bürste muss zuerst in die Hand!" }
+                    { text: "Im Flussdiagramm", correct: true },
+                    { text: "Im Struktogramm", correct: false, msg: "Falsch! Im Struktogramm gibt es nur einfache, gestapelte Rechtecke für alles." },
+                    { text: "In beiden Diagrammen", correct: false, msg: "Falsch! Struktogramme nutzen keine Ovale." }
                 ]}
                 onComplete={onComplete}
             />
         );
-        const L6_3 = ({ onComplete }) => (
-            <MCBossGauntlet
-                title="Boss: Der Chaos-Roboter" icon="fa-list-check" colorClass="bg-sky-100 border-sky-300 text-sky-900" textClass="text-sky-500"
-                questions={[
-                    { q: "Ein Programm soll ein Rechteck zeichnen: 1. Gehe 10 Schritte. 2. Setze den Stift auf das Papier. 3. Drehe dich. Warum wird anfangs keine Linie gemalt?", options: [
-                        { text: "Reihenfolge", correct: true },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Endlichkeit", correct: false },
-                        { text: "Eindeutigkeit", correct: false }
-                    ]},
-                    { q: "'1. Sende die E-Mail ab. 2. Tippe die Nachricht. 3. Öffne das E-Mail-Programm.' Welcher Schritt muss logischerweise an Position 1 stehen?", options: [
-                        { text: "Schritt 3", correct: true },
-                        { text: "Schritt 2", correct: false },
-                        { text: "Schritt 1", correct: false },
-                        { text: "Keiner der Schritte", correct: false }
-                    ]},
-                    { q: "Zuerst wird dem Computer befohlen, die Variable 'x' auf dem Bildschirm auszugeben. Erst im nächsten Schritt wird der Variablen der Wert '5' zugewiesen. Welcher Fehler ist das?", options: [
-                        { text: "Reihenfolge", correct: true },
-                        { text: "Eindeutigkeit", correct: false },
-                        { text: "Endlichkeit", correct: false },
-                        { text: "Ausführbarkeit", correct: false }
-                    ]}
-                ]}
-                onComplete={onComplete}
-            />
-        );
+        const L6_3 = ({ onComplete }) => {
+            const dragTasks = [
+                // FLOWCHARTS (1-4)
+                {
+                    title: "Flussdiagramm: Ein kleiner Schritt",
+                    layout: "flow-3",
+                    blocks: [{id: 1, text: 'START'}, {id: 2, text: 'Gehe vorwärts'}, {id: 3, text: 'ENDE'}],
+                    solution: [1, 2, 3]
+                },
+                {
+                    title: "Flussdiagramm: Abbiegen",
+                    layout: "flow-4",
+                    blocks: [{id: 1, text: 'START'}, {id: 2, text: 'ENDE'}, {id: 3, text: 'Drehe links'}, {id: 4, text: 'Gehe vor'}],
+                    solution: [1, 3, 4, 2]
+                },
+                {
+                    title: "Flussdiagramm: Verzweigung",
+                    layout: "flow-branch",
+                    blocks: [{id: 1, text: 'Ist Wand vorne?'}, {id: 2, text: 'Drehe rechts'}, {id: 3, text: 'Gehe vorwärts'}],
+                    solution: [1, 2, 3] // 0=Diamond, 1=Ja, 2=Nein
+                },
+                {
+                    title: "Flussdiagramm: Die Schleife",
+                    layout: "flow-branch", // Wir tricksen das Layout als einfache Bedingung, aber textlich als Schleife
+                    blocks: [{id: 1, text: 'Socken da?'}, {id: 2, text: 'Sammeln & zurück'}, {id: 3, text: 'ENDE'}],
+                    solution: [1, 2, 3]
+                },
+                // STRUKTOGRAMME (5-8)
+                {
+                    title: "Struktogramm: Kurze Sequenz",
+                    layout: "struct-2",
+                    blocks: [{id: 1, text: 'Zahnbürste nehmen'}, {id: 2, text: 'Zähne putzen'}],
+                    solution: [1, 2]
+                },
+                {
+                    title: "Struktogramm: Lange Sequenz",
+                    layout: "struct-3",
+                    blocks: [{id: 1, text: 'Buch aufschlagen'}, {id: 2, text: 'Buch lesen'}, {id: 3, text: 'Buch zuklappen'}],
+                    solution: [1, 2, 3]
+                },
+                {
+                    title: "Struktogramm: WENN-DANN",
+                    layout: "struct-if",
+                    blocks: [{id: 1, text: 'Regnet es heute?'}, {id: 2, text: 'Regenschirm'}, {id: 3, text: 'Sonnenbrille'}],
+                    solution: [1, 2, 3]
+                },
+                {
+                    title: "Struktogramm: WIEDERHOLE",
+                    layout: "struct-loop",
+                    blocks: [{id: 1, text: 'SOLANGE Socken da sind:'}, {id: 2, text: 'Hebe Socke auf'}],
+                    solution: [1, 2]
+                }
+            ];
 
-        // WELT 7: REGEL 4 (ENDLICHKEIT)
-        const L7_1 = ({ onComplete }) => (
-            <div className="animate-pop-in">
-                <DialogBox title="Regel 4: Endlich" icon="fa-hourglass-end" color="red">
-                    <p><b>Algo ruft:</b> "Die letzte Regel ist die <strong>Endlichkeit</strong>!"</p>
-                    <p>Ein Algorithmus muss sein Problem lösen und danach <b>zu einem Ende kommen</b> (stoppen).</p>
-                    <p>Wenn ein Code niemals aufhört, haben wir eine sogenannte "Endlosschleife". Der Computer stürzt dann ab, weil er für immer festhängt!</p>
-                </DialogBox>
-                <ReadTimerButton color="red" onClick={onComplete} duration={10}>Code muss stoppen!</ReadTimerButton>
-            </div>
-        );
-        const L7_2 = ({ onComplete }) => (
-            <MCLevel 
-                title="Die Endlosschleife" icon="fa-rotate" color="orange"
-                text="Welches Beispiel vergleicht einen Verstoß gegen die 'Endlichkeits-Regel' (eine Endlosschleife) am besten?"
-                options={[
-                    { text: "Ich esse 1 Stück Torte, dann noch eins... für den Rest meines Lebens.", correct: true },
-                    { text: "Ich esse 1 Stück Torte und lege den Löffel weg.", correct: false, msg: "Falsch! Das ist endlich. Es hat ein klares Ende." },
-                    { text: "Ich trinke ein ganzes Glas Wasser auf einmal aus.", correct: false, msg: "Das hat ein klares Ende, sobald das Glas leer ist." },
-                    { text: "Ich laufe 100 Meter und bleibe dann stehen.", correct: false, msg: "Auch hier gibt es ein klares Ende (bei 100 Metern)." }
-                ]}
-                onComplete={onComplete}
-            />
-        );
-        const L7_3 = ({ onComplete }) => (
-            <MCBossGauntlet
-                title="Boss: Der Unendliche Code" icon="fa-infinity" colorClass="bg-red-100 border-red-300 text-red-900" textClass="text-red-500"
-                questions={[
-                    { q: "Ein Roboter soll die mathematische Zahl Pi (π) bis zur allerletzten Nachkommastelle berechnen. Warum ist das in der Informatik kein gültiger Algorithmus?", options: [
-                        { text: "Endlichkeit", correct: true },
-                        { text: "Reihenfolge", correct: false },
-                        { text: "Eindeutigkeit", correct: false },
-                        { text: "Ausführbarkeit", correct: false }
-                    ]},
-                    { q: "Eine Schleife lautet: 'Solange 1 + 1 = 2 ist, klatsche in die Hände.' Was ist das Problem?", options: [
-                        { text: "Endlichkeit (Die Bedingung ist immer wahr, er klatscht ewig)", correct: true },
-                        { text: "Reihenfolge", correct: false },
-                        { text: "Ausführbarkeit", correct: false },
-                        { text: "Eindeutigkeit", correct: false }
-                    ]},
-                    { q: "'Gehe solange vorwärts, bis du eine Wand berührst.' (Der Roboter steht jedoch in einer grenzenlosen, endlosen Wüste). Welche Regel wird hier zum Verhängnis?", options: [
-                        { text: "Endlichkeit", correct: true },
-                        { text: "Reihenfolge", correct: false },
-                        { text: "Eindeutigkeit", correct: false },
-                        { text: "Ausführbarkeit", correct: false }
-                    ]}
-                ]}
-                onComplete={onComplete}
-            />
-        );
+            return (
+                <DnDBossGauntlet 
+                    title="Darstellungs-Meister" icon="fa-puzzle-piece" 
+                    colorClass="bg-red-100 border-red-300 text-red-900" textClass="text-red-600"
+                    tasks={dragTasks}
+                    onComplete={onComplete}
+                />
+            );
+        };
 
-        // WELT 8: FINALE KLAUSUR
-        const L8_1 = ({ onComplete }) => (
-            <div className="animate-pop-in">
-                <DialogBox title="Zertifikat: Regel-Meister" icon="fa-certificate" color="purple">
-                    <p><b>Algo gratuliert:</b> "Willkommen in der <strong>Quiz-Welt</strong>!"</p>
-                    <p>Fassen wir zusammen, was du für die große End-Prüfung wissen musst:</p>
-                    <ul className="list-disc list-inside space-y-2 font-bold text-purple-900 bg-white p-4 rounded-xl border border-purple-200 text-sm">
-                        <li><b>Algorithmus:</b> Abfolge von Anweisungen zur Problemlösung.</li>
-                        <li><b>1. Eindeutig:</b> Kein Spielraum, exakte Werte.</li>
-                        <li><b>2. Ausführbar:</b> Der PC/Roboter muss es tun können.</li>
-                        <li><b>3. Reihenfolge:</b> Oben nach unten, ohne Chaos.</li>
-                        <li><b>4. Endlich:</b> Es muss ein Ziel/Ende geben.</li>
-                    </ul>
-                </DialogBox>
-                <ReadTimerButton color="yellow" onClick={onComplete} duration={12}>Bereit für den Abschlusstest!</ReadTimerButton>
-            </div>
-        );
-        const L8_2 = ({ onComplete }) => (
-            <MCLevel 
-                title="Der ungenaue Künstler" icon="fa-palette" color="blue"
-                text="Ein Mal-Roboter bekommt den Code: '1. Nimm einen Pinsel. 2. Male ein schönes Bild. 3. Lege den Pinsel weg.' Er piepst und macht nichts. Welche Regel bricht Schritt 2?"
-                options={[
-                    { text: "Eindeutigkeit", correct: true },
-                    { text: "Ausführbarkeit", correct: false },
-                    { text: "Reihenfolge", correct: false },
-                    { text: "Endlichkeit", correct: false }
-                ]}
-                onComplete={onComplete}
-            />
-        );
-        const L8_3 = ({ onComplete }) => (
-            <MCBossGauntlet
-                title="Boss: Algorithmen-Prüfer" icon="fa-list-check" colorClass="bg-purple-100 border-purple-300 text-purple-900" textClass="text-purple-600"
-                questions={[
-                    { 
-                        q: (
-                            <div>
-                                <span className="block mb-3 text-purple-800 text-base">Runde 1: Welche Regel bricht dieser Code?</span>
-                                <div className="bg-white p-4 rounded-xl border-2 border-gray-400 font-mono text-gray-800 text-sm shadow-sm leading-relaxed relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-2 h-full bg-red-200 border-r border-gray-300"></div>
-                                    <span className="pl-4 block">1. Nimm den Eimer.</span>
-                                    <span className="pl-4 block">2. Schütte 1 Liter Wasser hinein.</span>
-                                    <span className="pl-4 block">3. Wiederhole Schritt 2.</span>
-                                </div>
-                            </div>
-                        ), 
-                        options: [
-                            { text: "Endlichkeit", correct: true },
-                            { text: "Ausführbarkeit", correct: false },
-                            { text: "Reihenfolge", correct: false },
-                            { text: "Eindeutigkeit", correct: false }
-                        ]
-                    },
-                    { 
-                        q: (
-                            <div>
-                                <span className="block mb-3 text-purple-800 text-base">Runde 2: Welche Regel ist hier gebrochen?</span>
-                                <div className="bg-white p-4 rounded-xl border-2 border-gray-400 font-mono text-gray-800 text-sm shadow-sm leading-relaxed relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-2 h-full bg-red-200 border-r border-gray-300"></div>
-                                    <span className="pl-4 block">1. Klebe Briefmarke auf Umschlag.</span>
-                                    <span className="pl-4 block">2. Schreibe Text aufs Papier.</span>
-                                    <span className="pl-4 block">3. Wirf Brief in Kasten.</span>
-                                    <span className="pl-4 block">4. Stecke Papier in Umschlag.</span>
-                                </div>
-                            </div>
-                        ), 
-                        options: [
-                            { text: "Reihenfolge", correct: true },
-                            { text: "Eindeutigkeit", correct: false },
-                            { text: "Endlichkeit", correct: false },
-                            { text: "Ausführbarkeit", correct: false }
-                        ]
-                    },
-                    { 
-                        q: (
-                            <div>
-                                <span className="block mb-3 text-purple-800 text-base">Runde 3: Algorithmus für deinen Computer. Welche Regel bricht Schritt 3?</span>
-                                <div className="bg-white p-4 rounded-xl border-2 border-gray-400 font-mono text-gray-800 text-sm shadow-sm leading-relaxed relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-2 h-full bg-red-200 border-r border-gray-300"></div>
-                                    <span className="pl-4 block">1. Schalte dich ein.</span>
-                                    <span className="pl-4 block">2. Drucke das Dokument.</span>
-                                    <span className="pl-4 block">3. Fliege zum Lehrer und gib ihm das Blatt.</span>
-                                </div>
-                            </div>
-                        ), 
-                        options: [
-                            { text: "Ausführbarkeit", correct: true },
-                            { text: "Reihenfolge", correct: false },
-                            { text: "Eindeutigkeit", correct: false },
-                            { text: "Endlichkeit", correct: false }
-                        ]
-                    }
-                ]}
-                onComplete={onComplete}
-            />
-        );
-
-        // --- WELT 9: ROBO-ARENA (MINI-GAME) ---
+        // --- WELT 7: ROBO-ARENA (MINI-GAME, ehemals W9/W5) ---
         const RoboArenaGame = ({ onComplete }) => {
             const [level, setLevel] = useState(1);
             const maxLevel = 18; 
@@ -1045,17 +1234,15 @@
         };
 
 
-        // --- WELT DEFINITIONEN ---
+        // --- WELT DEFINITIONEN (AKTUALISIERT AUF 7 WELTEN) ---
         const WORLDS = [
             { id: 1, title: "Grundlagen", levels: [{n: "1-1", C: L1_1}, {n: "1-2", C: L1_2}, {n: "1-3", C: L1_3, boss: true}] },
             { id: 2, title: "Roboter-Mission", levels: [{n: "2-1", C: L2_1}, {n: "2-2", C: L2_2}, {n: "2-3", C: L2_3, boss: true}] },
-            { id: 3, title: "Die 4 Regeln", levels: [{n: "3-1", C: L3_1}, {n: "3-2", C: L3_2}, {n: "3-3", C: L3_3, boss: true}] },
-            { id: 4, title: "Regel: Eindeutig", levels: [{n: "4-1", C: L4_1}, {n: "4-2", C: L4_2}, {n: "4-3", C: L4_3, boss: true}] },
-            { id: 5, title: "Regel: Ausführbar", levels: [{n: "5-1", C: L5_1}, {n: "5-2", C: L5_2}, {n: "5-3", C: L5_3, boss: true}] },
-            { id: 6, title: "Regel: Reihenfolge", levels: [{n: "6-1", C: L6_1}, {n: "6-2", C: L6_2}, {n: "6-3", C: L6_3, boss: true}] },
-            { id: 7, title: "Regel: Endlich", levels: [{n: "7-1", C: L7_1}, {n: "7-2", C: L7_2}, {n: "7-3", C: L7_3, boss: true}] },
-            { id: 8, title: "Quiz-Welt", levels: [{n: "8-1", C: L8_1}, {n: "8-2", C: L8_2}, {n: "8-3", C: L8_3, boss: true}] },
-            { id: 9, title: "Roboter-Arena", levels: [{n: "9-1", C: RoboArenaGame, boss: true}] },
+            { id: 3, title: "Die 4 Regeln", levels: [{n: "3-1", C: L3_1}, {n: "3-2", C: L3_2}, {n: "3-3", C: L3_3}, {n: "3-4", C: L3_4}, {n: "3-5", C: L3_5, boss: true}] },
+            { id: 4, title: "Flussdiagramme", levels: [{n: "4-1", C: L4_1}, {n: "4-2", C: L4_2}, {n: "4-3", C: L4_3, boss: true}] },
+            { id: 5, title: "Struktogramme", levels: [{n: "5-1", C: L5_1}, {n: "5-2", C: L5_2}, {n: "5-3", C: L5_3, boss: true}] },
+            { id: 6, title: "Meister-Test", levels: [{n: "6-1", C: L6_1}, {n: "6-2", C: L6_2}, {n: "6-3", C: L6_3, boss: true}] },
+            { id: 7, title: "Roboter-Arena", levels: [{n: "7-1", C: RoboArenaGame, boss: true}] },
         ];
 
         // --- HAUPT-APP ---
@@ -1084,12 +1271,35 @@
             };
             const splitLvl = (l) => l.split('-').map(Number);
             
-            const getNextLvl = (currId) => {
-                let [w, l] = splitLvl(currId);
-                if(w === 9 && l === 1) return 'win'; 
-                if(l < 3) return `${w}-${l+1}`;
-                return `${w+1}-1`;
+            const getLevelIndex = (lvlId) => {
+                if (lvlId === 'win') return WORLDS.reduce((acc, w) => acc + w.levels.length, 0);
+                let index = 0;
+                for (let w of WORLDS) {
+                    for (let l of w.levels) {
+                        if (l.n === lvlId) return index;
+                        index++;
+                    }
+                }
+                return index;
             };
+
+            const getNextLvl = (currId) => {
+                const [wStr, lStr] = currId.split('-');
+                const w = Number(wStr);
+                const l = Number(lStr);
+                const currentWorld = WORLDS.find(world => world.id === w);
+                
+                if (l < currentWorld.levels.length) {
+                    return `${w}-${l+1}`;
+                } else {
+                    if (w < WORLDS.length) {
+                        return `${w+1}-1`;
+                    } else {
+                        return 'win';
+                    }
+                }
+            };
+
             const onLevelComplete = () => {
                 const nextId = getNextLvl(activeLevelId);
                 if (nextId === 'win') { setView('win'); } 
@@ -1099,11 +1309,12 @@
                     if (nextW > activeWorldId) { setView('overview'); } else { setView('world'); }
                 }
             };
-            const handleCheat = () => { if(cheatPw === 'Sonnenschein') { setMaxUnlocked('9-1'); setShowCheatModal(false); setCheatPw(''); } };
+            const handleCheat = () => { if(cheatPw === 'Sonnenschein') { setMaxUnlocked('7-1'); setShowCheatModal(false); setCheatPw(''); } };
 
             const [maxW, maxL] = splitLvl(maxUnlocked);
-            const totalLevelsCompleted = ((maxW - 1) * 3) + (maxL - 1);
+            const totalLevelsCompleted = getLevelIndex(maxUnlocked);
             const xp = totalLevelsCompleted * 10;
+            const maxXP = WORLDS.reduce((acc, w) => acc + w.levels.length, 0) * 10;
 
             if (view === 'win') {
                 return (
@@ -1121,7 +1332,7 @@
             if (view === 'level') {
                 let LvlComp = null;
                 WORLDS.forEach(w => w.levels.forEach(l => { if(l.n === activeLevelId) LvlComp = l.C; }));
-                const isArena = activeWorldId === 9;
+                const isArena = activeWorldId === WORLDS.length;
                 return (
                     <div className={`min-h-screen ${isArena ? 'bg-black' : 'bg-screenshot-dark'} flex items-center justify-center p-4 md:p-8`}>
                         <div className={`w-full max-w-4xl bg-white rounded-[2rem] overflow-hidden animate-pop-in ${isArena ? 'border-8 border-cyan-600 shadow-[0_0_30px_#00ffff]' : ''}`}>
@@ -1164,7 +1375,7 @@
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
                                 {WORLDS.map((w, i) => {
                                     const wUnlocked = isUnlocked(`${w.id}-1`);
-                                    const isArena = w.id === 9;
+                                    const isArena = w.id === WORLDS.length;
                                     return (
                                         <button 
                                             key={w.id} disabled={!wUnlocked} onClick={() => { setActiveWorldId(w.id); setView('world'); }}
@@ -1198,11 +1409,18 @@
             }
 
             const W = WORLDS.find(w => w.id === activeWorldId);
-            const isArena = W.id === 9;
+            const isArena = W.id === WORLDS.length;
             let worldProgress = 0;
             if (maxW > W.id) worldProgress = 100;
             else if (maxW === W.id) worldProgress = Math.round(((maxL - 1) / W.levels.length) * 100);
-            const nodePos = [ { left: '20%', top: '75%' }, { left: '50%', top: '50%' }, { left: '75%', top: '25%' } ];
+
+            const currentNodes = W.levels.length === 5 ? [
+                { left: '15%', top: '80%' }, { left: '35%', top: '65%' }, { left: '55%', top: '50%' }, { left: '75%', top: '35%' }, { left: '85%', top: '15%' }
+            ] : W.levels.length === 3 ? [
+                { left: '20%', top: '75%' }, { left: '50%', top: '50%' }, { left: '75%', top: '25%' }
+            ] : [
+                { left: '50%', top: '50%' }
+            ];
 
             return (
                 <div className={`min-h-screen ${isArena ? 'bg-black' : 'bg-screenshot-dark'} flex flex-col font-sans`}>
@@ -1213,8 +1431,8 @@
                         </div>
                         {!isArena && (
                             <div className="flex items-center gap-4">
-                                <div className="text-right"><div className="font-black text-screenshot-dark text-sm leading-tight">LEVEL {maxW}</div><div className="text-xs text-gray-500 font-bold">{xp} / 240 XP</div></div>
-                                <div className="w-24 md:w-40 h-6 bg-screenshot-panel rounded-full overflow-hidden border border-gray-300"><div className="h-full bg-blue-500" style={{ width: `${(xp/240)*100}%` }}></div></div>
+                                <div className="text-right"><div className="font-black text-screenshot-dark text-sm leading-tight">LEVEL {maxW}</div><div className="text-xs text-gray-500 font-bold">{xp} / {maxXP} XP</div></div>
+                                <div className="w-24 md:w-40 h-6 bg-screenshot-panel rounded-full overflow-hidden border border-gray-300"><div className="h-full bg-blue-500" style={{ width: `${(xp/maxXP)*100}%` }}></div></div>
                             </div>
                         )}
                     </div>
@@ -1242,14 +1460,19 @@
                             </div>
 
                             {W.id > 1 && <button onClick={()=>setActiveWorldId(w=>w-1)} className={`absolute left-2 md:left-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold shadow-md z-40 transition-colors ${isArena ? 'bg-gray-800 text-cyan-500 hover:bg-black border border-cyan-500' : 'bg-white/80 hover:bg-white'}`}><i className="fa-solid fa-chevron-left"></i></button>}
-                            {W.id < 9 && isUnlocked(`${W.id+1}-1`) && <button onClick={()=>setActiveWorldId(w=>w+1)} className={`absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold shadow-md z-40 transition-colors ${isArena ? 'bg-gray-800 text-cyan-500 hover:bg-black border border-cyan-500' : 'bg-white/80 hover:bg-white'}`}><i className="fa-solid fa-chevron-right"></i></button>}
+                            {W.id < WORLDS.length && isUnlocked(`${W.id+1}-1`) && <button onClick={()=>setActiveWorldId(w=>w+1)} className={`absolute right-2 md:right-4 top-1/2 -translate-y-1/2 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-bold shadow-md z-40 transition-colors ${isArena ? 'bg-gray-800 text-cyan-500 hover:bg-black border border-cyan-500' : 'bg-white/80 hover:bg-white'}`}><i className="fa-solid fa-chevron-right"></i></button>}
 
                             {!isArena && (
                                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
-                                    <line x1={nodePos[0].left} y1={nodePos[0].top} x2={nodePos[1].left} y2={nodePos[1].top} stroke="#eab308" strokeWidth="6" strokeDasharray="8 8" strokeLinecap="round" />
-                                    <line x1={nodePos[0].left} y1={nodePos[0].top} x2={nodePos[1].left} y2={nodePos[1].top} stroke="#ca8a04" strokeWidth="6" strokeDasharray="8 8" transform="translate(0, 3)" className="opacity-60" />
-                                    <line x1={nodePos[1].left} y1={nodePos[1].top} x2={nodePos[2].left} y2={nodePos[2].top} stroke="#eab308" strokeWidth="6" strokeDasharray="8 8" strokeLinecap="round" />
-                                    <line x1={nodePos[1].left} y1={nodePos[1].top} x2={nodePos[2].left} y2={nodePos[2].top} stroke="#ca8a04" strokeWidth="6" strokeDasharray="8 8" transform="translate(0, 3)" className="opacity-60" />
+                                    {W.levels.map((_, i) => {
+                                        if (i === W.levels.length - 1) return null;
+                                        return (
+                                            <g key={`line-${i}`}>
+                                                <line x1={currentNodes[i].left} y1={currentNodes[i].top} x2={currentNodes[i+1].left} y2={currentNodes[i+1].top} stroke="#eab308" strokeWidth="6" strokeDasharray="8 8" strokeLinecap="round" />
+                                                <line x1={currentNodes[i].left} y1={currentNodes[i].top} x2={currentNodes[i+1].left} y2={currentNodes[i+1].top} stroke="#ca8a04" strokeWidth="6" strokeDasharray="8 8" transform="translate(0, 3)" className="opacity-60" />
+                                            </g>
+                                        );
+                                    })}
                                 </svg>
                             )}
 
@@ -1258,7 +1481,7 @@
                                 const comp = isCompleted(l.n);
                                 const curr = l.n === maxUnlocked;
                                 const isAlgoHere = (W.id === maxW && (idx + 1) === maxL) || (W.id < maxW && idx === W.levels.length - 1);
-                                const pos = isArena ? { left: '50%', top: '50%' } : nodePos[idx];
+                                const pos = isArena ? { left: '50%', top: '50%' } : currentNodes[idx];
 
                                 return (
                                     <div key={l.n} className="absolute z-20 transform -translate-x-1/2 -translate-y-1/2" style={pos}>
