@@ -922,9 +922,9 @@
                                 </div>
                             </div>
                             <div className="font-mono bg-white p-4 rounded-xl border-2 border-gray-300 text-sm md:text-base text-gray-800 shadow-sm w-full text-left leading-relaxed">
-                                1. Gehe 1 Feld vorwärts.<br/>
+                                1. Gehe 1 Feld nach oben.<br/>
                                 2. Gehe 1 Feld nach rechts.<br/>
-                                3. Gehe 1 Feld rückwärts.
+                                3. Gehe 1 Feld nach unten.
                             </div>
                         </div>
                     </div>
@@ -932,7 +932,7 @@
                 options={[
                     { text: "Er steht genau rechts neben seinem Startpunkt.", correct: true },
                     { text: "Er steht wieder exakt auf seinem Startpunkt.", correct: false, msg: "Zeichne den Weg mal mit dem Finger auf den Tisch!" },
-                    { text: "Er steht zwei Felder vor seinem Startpunkt.", correct: false, msg: "Er ist zwischendurch abgebogen!" },
+                    { text: "Er steht zwei Felder über seinem Startpunkt.", correct: false, msg: "Er ist zwischendurch abgebogen!" },
                     { text: "Er steht links neben seinem Startpunkt.", correct: false, msg: "Achte auf die Richtung 'rechts'!" }
                 ]}
                 onComplete={onComplete}
@@ -1175,18 +1175,32 @@
             <div className="animate-pop-in">
                 <DialogBox title="Flussdiagramme" icon="fa-project-diagram" color="blue">
                     <p>Texte sind oft schwer zu lesen. Um Algorithmen übersichtlich darzustellen, zeichnet man sie! Ein <strong>Flussdiagramm</strong> zeigt den Weg mit Pfeilen. Es gibt drei wichtige Bausteine:</p>
-                    <div className="flex flex-col gap-4 mt-4 font-bold text-sm bg-white p-4 rounded-xl border border-blue-200 text-gray-800">
-                        <div className="flex items-center gap-4">
-                            <div className="w-16 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] text-blue-900">START</div>
-                            <span>Ovale für Start und Ende</span>
+                    
+                    <div className="flex flex-col md:flex-row gap-6 mt-4 items-center">
+                        <div className="flex flex-col gap-4 font-bold text-sm bg-white p-4 rounded-xl border border-blue-200 text-gray-800 flex-1 w-full">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] text-blue-900 shrink-0">START</div>
+                                <span>Ovale für Start und Ende</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-8 rounded-md bg-green-100 border-2 border-green-500 flex items-center justify-center text-[10px] text-green-900 shrink-0">Aktion</div>
+                                <span>Rechtecke für normale Anweisungen</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-10 bg-orange-100 border-2 border-orange-500 flex items-center justify-center text-[10px] text-orange-900 shrink-0" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}>Frage?</div>
+                                <span>Rauten für Bedingungen (WENN-DANN)</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <div className="w-16 h-8 rounded-md bg-green-100 border-2 border-green-500 flex items-center justify-center text-[10px] text-green-900">Aktion</div>
-                            <span>Rechtecke für normale Anweisungen</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="w-16 h-10 bg-orange-100 border-2 border-orange-500 flex items-center justify-center text-[10px] text-orange-900" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}>Frage?</div>
-                            <span>Rauten für Bedingungen (WENN-DANN)</span>
+
+                        {/* Abstraktes Beispiel-Diagramm rechts */}
+                        <div className="flex flex-col items-center gap-1 bg-gray-50 p-4 rounded-xl border-4 border-gray-200 shadow-inner w-full md:w-auto shrink-0">
+                            <div className="w-20 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">START</div>
+                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
+                            <div className="w-20 h-8 rounded-md bg-green-100 border-2 border-green-500 flex items-center justify-center text-[10px] font-bold text-green-900 shadow-sm">Aktion</div>
+                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
+                            <div className="w-24 h-12 bg-orange-100 border-2 border-orange-500 flex items-center justify-center text-[10px] font-bold text-orange-900 shadow-sm" style={{clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'}}>Frage?</div>
+                            <i className="fa-solid fa-arrow-down text-gray-400"></i>
+                            <div className="w-20 h-8 rounded-full bg-blue-100 border-2 border-blue-500 flex items-center justify-center text-[10px] font-bold text-blue-900 shadow-sm">ENDE</div>
                         </div>
                     </div>
                 </DialogBox>
@@ -1442,15 +1456,19 @@
             if (view === 'login') {
                 return (
                     <div className="min-h-screen bg-sky-300 flex items-center justify-center p-4 font-sans">
-                        <div className="bg-white p-10 rounded-3xl shadow-2xl text-center max-w-lg border-8 border-blue-500 animate-pop-in w-full">
-                            <i className="fa-solid fa-user-graduate text-7xl text-blue-500 mb-6"></i>
-                            <h1 className="text-3xl font-black text-gray-800 mb-4">Wer spielt gerade?</h1>
-                            <p className="text-gray-600 mb-6 font-bold">Bitte gebt eure Namen ein (z.B. "Max & Anna"):</p>
+                        <div className="relative bg-white p-10 mt-16 rounded-3xl shadow-2xl text-center max-w-lg border-8 border-blue-500 animate-pop-in w-full">
+                            {/* Algo Charakter über dem Login Fenster */}
+                            <div className="absolute -top-24 left-1/2 transform -translate-x-1/2 scale-150 origin-bottom z-50">
+                                <AlgoCharacter />
+                            </div>
+                            
+                            <h1 className="text-3xl font-black text-gray-800 mb-4 mt-6">Wer spielt gerade?</h1>
+                            <p className="text-gray-600 mb-6 font-bold">"Hallo! Ich bin Algo. Ich möchte gerne eure Namen kennenlernen. Bitte tragt euch ein!"</p>
                             <input 
                                 type="text" 
                                 value={studentName} 
                                 onChange={e => setStudentName(e.target.value)}
-                                placeholder="Eure Namen..."
+                                placeholder="Eure Namen (z.B. Max & Anna)..."
                                 className="w-full p-4 text-xl border-4 border-gray-300 rounded-xl mb-6 text-center focus:border-blue-500 outline-none"
                                 onKeyDown={e => { if(e.key === 'Enter' && studentName.trim()) setView('overview') }}
                             />
