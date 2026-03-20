@@ -686,13 +686,18 @@
             const maxLevel = 18; 
             const size = Math.floor((level - 1) / 3) + 3;
 
-            const [timeLeft, setTimeLeft] = useState(30);
+            const [timeLeft, setTimeLeft] = useState(45);
             const [status, setStatus] = useState('start'); 
             const [failReason, setFailReason] = useState('');
             const [seq, setSeq] = useState([]);
             const [pos, setPos] = useState({x: 0, y: 0, dir: 90}); 
             const [target, setTarget] = useState({x: size-1, y: size-1});
             const [walls, setWalls] = useState([]);
+
+            // --- POINTS SYSTEM ---
+            const [score, setScore] = useState(0);
+            const [checkpointScore, setCheckpointScore] = useState(0);
+            const [lastEarned, setLastEarned] = useState(0);
 
             useEffect(() => { if (status === 'start') generateLevel(level); }, [level, status]);
 
@@ -713,7 +718,7 @@
                     if (!path.has(`${wx},${wy}`) && !newWalls.some(w => w.x===wx && w.y===wy)) { newWalls.push({x: wx, y: wy}); }
                 }
                 setWalls(newWalls); setPos({x: 0, y: 0, dir: 90}); setTarget({x: s-1, y: s-1});
-                setSeq([]); setTimeLeft(30); setStatus('playing');
+                setSeq([]); setTimeLeft(45); setStatus('playing');
             };
 
             useEffect(() => {
@@ -749,8 +754,15 @@
                     }
                 }
                 if (cx === target.x && cy === target.y) { 
-                    if (level === maxLevel) setStatus('won_game'); 
-                    else setStatus('passed'); 
+                    const earned = 50 + (timeLeft * 10);
+                    setLastEarned(earned);
+                    setScore(s => s + earned);
+
+                    if (level === maxLevel) {
+                        setStatus('won_game'); 
+                    } else {
+                        setStatus('passed'); 
+                    } 
                 } 
                 else { 
                     setStatus('failed'); 
@@ -759,8 +771,19 @@
                 }
             };
 
-            const restartFromCheckpoint = () => { setLevel(Math.floor((level - 1) / 3) * 3 + 1); setStatus('start'); };
-            const nextLevel = () => { setLevel(l => l + 1); setStatus('start'); };
+            const restartFromCheckpoint = () => { 
+                setLevel(Math.floor((level - 1) / 3) * 3 + 1); 
+                setScore(checkpointScore); 
+                setStatus('start'); 
+            };
+            const nextLevel = () => { 
+                const nextLvl = level + 1;
+                setLevel(nextLvl); 
+                if ((nextLvl - 1) % 3 === 0) {
+                    setCheckpointScore(score + lastEarned);
+                }
+                setStatus('start'); 
+            };
             const addCmd = (c) => { if (seq.length < 25) setSeq([...seq, c]); };
             const delCmd = () => { if (seq.length > 0) setSeq(seq.slice(0, -1)); };
 
@@ -769,7 +792,8 @@
                     <div className="text-center animate-pop-in">
                         <i className="fa-solid fa-trophy text-8xl text-yellow-400 mb-6 animate-float block drop-shadow-[0_0_15px_yellow]"></i>
                         <h2 className="text-5xl font-black mb-4 text-cyan-400 glitch-text font-mono">ARENA BEZWUNGEN!</h2>
-                        <p className="text-white text-xl font-mono mb-8">Du hast alle 18 Level überstanden!</p>
+                        <p className="text-white text-xl font-mono mb-4">Du hast alle 18 Level überstanden!</p>
+                        <p className="text-yellow-400 text-3xl font-black font-mono mb-8">ENDSTAND: {score} PUNKTE</p>
                         <Button3D color="black" onClick={onComplete}>ZURÜCK ZUR KARTE</Button3D>
                     </div>
                 );
@@ -778,8 +802,13 @@
             return (
                 <div className="w-full flex flex-col font-mono text-white animate-fade-in-up">
                     <div className="flex justify-between items-center bg-gray-900 border-2 border-cyan-500 rounded-xl p-4 mb-4 shadow-[0_0_10px_#00ffff]">
-                        <div><p className="text-cyan-400 font-bold text-xl">Lvl {level}/18</p><p className="text-gray-400 text-xs">Grid: {size}x{size}</p></div>
-                        <div className={`text-4xl font-black ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}</div>
+                        <div>
+                            <p className="text-cyan-400 font-bold text-xl">Lvl {level}/18</p>
+                            <p className="text-yellow-400 text-sm font-bold shadow-sm">{score} PKT</p>
+                        </div>
+                        <div className={`text-4xl font-black ${timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
+                            00:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
+                        </div>
                     </div>
 
                     {status === 'failed' && (
@@ -793,7 +822,11 @@
                     {status === 'passed' && (
                         <div className="bg-green-900 border-4 border-green-500 p-6 rounded-xl text-center mb-4 animate-pop-in shadow-[0_0_20px_#22c55e]">
                             <p className="text-3xl font-black mb-2 text-white">LEVEL GESCHAFFT!</p>
-                            <p className="text-green-300 font-bold mb-6">Zeit übrig: {timeLeft}s</p>
+                            <div className="text-green-300 font-bold mb-6 space-y-2">
+                                <p>Level geschafft: +50 Pkt</p>
+                                <p>Zeit-Bonus ({timeLeft}s): +{timeLeft * 10} Pkt</p>
+                                <p className="text-2xl text-yellow-400 mt-2">+{lastEarned} PUNKTE!</p>
+                            </div>
                             <Button3D color="green" onClick={nextLevel}>Nächstes Level</Button3D>
                         </div>
                     )}
@@ -898,7 +931,7 @@
             <div className="animate-pop-in">
                 <DialogBox title="Roboter steuern" icon="fa-robot" color="orange">
                     <p><b>Algo erklärt:</b> "Computer und Roboter denken nicht selbst. Sie tun nur exakt das, was man ihnen als Anweisung gibt!"</p>
-                    <p>Du lernst jetzt, wie man einen kleinen Roboter namens <b>Robbie</b> steuert. Er kennt nur ganz einfache Befehle wie "Gehe vorwärts", "rückwärts", "links" oder "rechts".</p>
+                    <p>Du lernst jetzt, wie man einen kleinen Roboter namens <b>Robbie</b> steuert. Er kennt nur ganz einfache Befehle wie "Gehe nach oben", "unten", "links" oder "rechts".</p>
                 </DialogBox>
                 <ReadTimerButton color="orange" onClick={onComplete}>Ich übernehme die Steuerung!</ReadTimerButton>
             </div>
@@ -1457,7 +1490,6 @@
                 return (
                     <div className="min-h-screen bg-sky-300 flex items-center justify-center p-4 font-sans">
                         <div className="relative bg-white p-10 mt-16 rounded-3xl shadow-2xl text-center max-w-lg border-8 border-blue-500 animate-pop-in w-full">
-                            {/* Algo Charakter über dem Login Fenster */}
                             <div className="absolute -top-24 left-1/2 transform -translate-x-1/2 scale-150 origin-bottom z-50">
                                 <AlgoCharacter />
                             </div>
